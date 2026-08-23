@@ -1,0 +1,43 @@
+{
+  "name": "personal-developer-blog",
+  "type": "module",
+  "private": true,
+  "packageManager": "pnpm@11.19.0",
+  "scripts": {
+    "build": "prisma generate && nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "typecheck": "nuxt typecheck",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:studio": "prisma studio",
+    "admin:init": "tsx scripts/init-admin.ts"
+  },
+  "dependencies": {
+    "@nuxt/ui": "^4.11.0",
+    "@prisma/adapter-pg": "^7.9.1",
+    "@prisma/client": "^7.9.1",
+    "argon2": "^0.45.1",
+    "dotenv": "^17.4.2",
+    "markdown-it": "^15.0.0",
+    "nuxt": "^4.5.2",
+    "pg": "^8.23.0",
+    "sanitize-html": "^2.17.7",
+    "shiki": "^4.4.3",
+    "vditor": "^3.11.3",
+    "vue": "^3.5.41",
+    "vue-router": "^5.2.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/markdown-it": "^14.2.0",
+    "@types/node": "^26.2.0",
+    "@types/sanitize-html": "^2.16.1",
+    "prisma": "^7.9.1",
+    "tsx": "^4.23.12",
+    "typescript": "^5.9.3",
+    "vue-tsc": "^3.3.11"
+  }
+}

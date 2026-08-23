@@ -1,0 +1,1 @@
+export default defineEventHandler(async event => { const id=Number(getRouterParam(event,'id')); if(!Number.isInteger(id)||id<1)return apiError(event,400,'INVALID_ID','项目 ID 无效'); const result=await usePrisma().project.deleteMany({where:{id}}); if(!result.count)return apiError(event,404,'NOT_FOUND','项目不存在'); setResponseStatus(event,204); return null })

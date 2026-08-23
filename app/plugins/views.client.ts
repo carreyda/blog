@@ -1,0 +1,1 @@
+export default defineNuxtPlugin(nuxtApp=>{nuxtApp.hook('page:finish',()=>{const path=useRoute().path;if(path.startsWith('/admin'))return;const match=path.match(/^\/blog\/(\d+)$/);const body=match?{postId:Number(match[1])}:{};void $fetch('/api/views',{method:'POST',body}).catch(()=>undefined)})})

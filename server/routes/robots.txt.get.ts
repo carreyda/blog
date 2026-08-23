@@ -1,0 +1,1 @@
+export default defineEventHandler(event=>{setHeader(event,'content-type','text/plain; charset=utf-8');const base=useRuntimeConfig(event).public.siteUrl;return`User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api/admin\nSitemap: ${base}/sitemap.xml\n`})

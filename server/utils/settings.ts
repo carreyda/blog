@@ -1,0 +1,3 @@
+import type { SiteSettingValue } from '#shared/schemas/settings'
+export const defaultSettings:SiteSettingValue={siteName:'Blog',siteDescription:'个人主页、技术博客与项目展示。',avatarUrl:null,logoUrl:null,personName:'开发者',bio:'记录技术实践、工程思考与持续学习。',currentStatus:'持续构建中',email:'',techStack:['Nuxt','TypeScript','PostgreSQL'],featuredProjectCount:3,aboutMarkdown:'# 关于我\n\n在这里介绍你自己。',social:{github:null,twitter:null,linkedin:null,juejin:null,zhihu:null,xiaohongshu:null},seo:{title:'个人博客',description:'个人主页、技术博客与项目展示。',ogImage:null}}
+export async function getSettings(){const row=await usePrisma().siteSetting.findUnique({where:{id:1}});return row?.value as SiteSettingValue||defaultSettings}
