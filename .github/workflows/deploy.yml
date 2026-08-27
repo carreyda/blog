@@ -1,0 +1,65 @@
+name: Deploy to Tencent Cloud
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Configure SSH
+        env:
+          SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+          SERVER_KNOWN_HOSTS: ${{ secrets.SERVER_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/blog_deploy
+          chmod 600 ~/.ssh/blog_deploy
+          printf '%s\n' "$SERVER_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Upload source
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+        run: |
+          rsync -az --delete \
+            --exclude='.env' \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            --exclude='.claude/' \
+            --exclude='node_modules/' \
+            --exclude='.nuxt/' \
+            --exclude='.output/' \
+            -e "ssh -i ~/.ssh/blog_deploy" \
+            ./ "$SERVER_USER@$SERVER_HOST:/var/www/personal-blog/"
+
+      - name: Install, migrate, build, and reload
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+        run: |
+          ssh -i ~/.ssh/blog_deploy "$SERVER_USER@$SERVER_HOST" <<'REMOTE'
+            set -euo pipefail
+            cd /var/www/personal-blog
+            test -f .env
+            pnpm install --frozen-lockfile
+            pnpm exec prisma migrate deploy
+            pnpm build
+            pm2 startOrReload ecosystem.config.cjs --update-env
+            pm2 save
+            curl --fail --silent --show-error http://127.0.0.1:3000/api/health
+          REMOTE
