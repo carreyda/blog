@@ -1,8 +1,9 @@
 # 个人博客系统 PRD
 
-> Version: V2.0（重构版，基于 V1.0 内容重新组织）
-> Date: 2026-08-20
-> Status: Draft
+> Version: V2.1（上线基线版）
+> Date: 2026-08-29
+> Status: V1 已上线，持续迭代
+> Production: https://carreyda.com
 
 ---
 
@@ -20,6 +21,7 @@
 - Part J　范围边界（V1 不做的事）
 - Part K　优先级、路线图与验收标准
 - Part L　后续规划
+- Part M　当前实现状态与已知差异
 
 ---
 
@@ -27,7 +29,7 @@
 
 ## A.1 项目定位
 
-个人博客系统（项目最终名称、Logo、域名后续确定），面向个人长期使用，定位为：
+个人博客系统，生产域名为 **carreyda.com**，面向个人长期使用，定位为：
 
 **个人主页 + 技术博客 + 内容管理后台 + 数据统计系统**
 
@@ -77,7 +79,7 @@
 | Web Server | Nginx |
 | Node Process | PM2 |
 | CI/CD | GitHub Actions |
-| HTTPS | Let's Encrypt |
+| HTTPS | 腾讯云 TrustAsia DV TLS 证书（Nginx 手工部署） |
 
 ## B.2 系统架构
 
@@ -192,8 +194,8 @@ V1 不开发媒体库，不提供图片上传 / 存储 / 管理 / 腾讯云 COS 
 ### D.2.1 Header
 
 - 导航：首页 / 文章 / 项目 / 关于
-- 辅助功能：主题切换
-- 后续可增加：搜索
+- 当前主题跟随操作系统深浅色偏好
+- 后续可增加：手动主题切换
 
 ### D.2.2 Intro
 
@@ -234,15 +236,15 @@ V1 不开发媒体库，不提供图片上传 / 存储 / 管理 / 腾讯云 COS 
 
 路径 `/blog`，展示标题、摘要、日期、阅读时长、标签，支持分页。
 
-**搜索**（P1）：范围为文章标题 / 摘要 / 标签；后续可扩展正文全文搜索。
+**搜索**（已实现）：范围为文章标题 / 摘要 / 标签；后续可扩展正文全文搜索。
 
 ## D.4 文章详情
 
-路径 `/blog/[id]`，以文章自增 `id` 作为路径标识（不单独维护 slug 字段，省去 slug 生成与唯一性校验），页面包含：标题、摘要、发布时间、更新时间、阅读时长、标签、正文、TOC、上一篇、下一篇、相关文章。
+路径 `/blog/[id]`，以文章自增 `id` 作为路径标识（不单独维护 slug 字段，省去 slug 生成与唯一性校验）。当前页面包含：标题、摘要、发布时间、阅读时长、标签、封面、正文和 TOC。
 
-**相关文章**：与当前文章存在共同标签、且非本文自身的文章，按共同标签数量降序、发布时间降序排序，展示前 3～5 篇。不做语义相关性算法。
+**上一篇 / 下一篇与相关文章（P1，待实现）**：相关文章与当前文章存在共同标签且非本文自身，按共同标签数量降序、发布时间降序排序，展示前 3～5 篇，不做语义相关性算法。
 
-**阅读进度**：顶部显示细线阅读进度条，颜色 `#4493f8`。
+**阅读进度（P1，待实现）**：顶部显示细线阅读进度条，颜色 `#4493f8`。
 
 **代码块**：支持 Shiki 高亮、语言名称显示、Copy 按钮、横向滚动。
 
@@ -260,7 +262,7 @@ V1 不开发媒体库，不提供图片上传 / 存储 / 管理 / 腾讯云 COS 
 
 ## D.8 深色模式与 Design Token
 
-支持 `Light` / `Dark` / `System` 三种模式，主题主色 `#4493f8`。
+当前支持跟随操作系统的 `System` 深浅色模式，主题主色为 `#4493f8`。手动选择 `Light` / `Dark` / `System` 并持久化用户偏好列为 P1。
 
 基础主题变量（具体 Token 后续在 UI Design 阶段进一步细化）：
 
@@ -505,7 +507,7 @@ API 统一前缀 `/api`。后台管理接口前缀 `/api/admin`，需登录鉴�
 |---|---|---|
 | Posts | `GET /api/posts` | 文章列表，支持 `?tag=` 按标签 slug 筛选、`?q=` 搜索标题/摘要/标签、`?page=` 与 `?pageSize=` 分页 |
 | | `GET /api/posts/:id` | 文章详情；只返回已发布且存在的文章，读取操作本身不修改计数 |
-| | `GET /api/posts/:id/related` | 相关文章（同标签，见 Part D.4 排序规则） |
+| | `GET /api/posts/:id/related` | P1 规划：相关文章（同标签，见 Part D.4 排序规则），当前尚未实现 |
 | Tags | `GET /api/tags` | 标签列表（含每个标签下的文章数） |
 | | `GET /api/tags/:slug` | 指定标签下的文章列表 |
 | Projects | `GET /api/projects` | 项目列表 |
@@ -638,7 +640,7 @@ interface SaveProjectInput {
 
 ### G.1.7 安全响应头与传输
 
-- 生产环境强制 HTTPS，HTTP 重定向到 HTTPS，并启用 HSTS。
+- 生产环境强制 HTTPS，HTTP 与 `www` 均 301 重定向到规范地址 `https://carreyda.com`。HSTS 待完成证书续期自动化并稳定运行后启用。
 - 配置 Content Security Policy，至少限制 `default-src 'self'`、禁止对象嵌入、禁止被其他站点 iframe；按实际字体、图片和样式来源添加最小白名单。
 - 设置 `X-Content-Type-Options: nosniff`、`Referrer-Policy: strict-origin-when-cross-origin`、`Permissions-Policy` 和 `frame-ancestors 'none'`。
 - PostgreSQL 与 Nuxt 3000 端口不暴露公网；Nginx 正确覆盖可信代理头，不信任客户端直接传入的伪造转发头。
@@ -654,7 +656,7 @@ interface SaveProjectInput {
 
 ## G.2 部署架构
 
-服务器：Tencent Cloud CVM，推荐系统 Ubuntu。服务器运行：Nginx、Node.js、PM2、PostgreSQL、Nuxt、Git。
+生产服务器：Tencent Cloud CVM，Ubuntu Server 24.04 LTS。服务器运行 Nginx 1.24、Node.js 22、PM2、PostgreSQL 16、Nuxt 和 Git。
 
 **PM2 运行模式**：V1 使用 **Fork 单实例**（非 Cluster 多进程）。个人博客流量不大，单实例足够。Session 持久化到 PostgreSQL，因此部署、PM2 重启或服务器重启不会导致管理员被强制退出；V1 不引入 Redis。
 
@@ -668,17 +670,20 @@ Nuxt 3000 端口不暴露公网。
 
 ## G.3 HTTPS
 
-使用 Let's Encrypt，实现 HTTPS + 自动续签。
+生产环境使用腾讯云签发的 TrustAsia DV TLS 证书，证书同时覆盖 `carreyda.com` 与 `www.carreyda.com`，安装在 Nginx。HTTP 和 `www` 统一 301 跳转到 `https://carreyda.com`。
+
+腾讯云控制台的自动续费不等同于 CVM 上证书文件自动替换。当前证书到期时间为 **2026-10-03**；续签后必须重新下载、核对并替换 Nginx 中的证书与私钥，再执行配置检查和 reload。后续可改为 Certbot 自动续签，或完善腾讯云证书自动部署。
 
 ## G.4 GitHub CI/CD
 
 代码推送 `git push origin main` 触发 GitHub Actions，Pipeline：
 
 ```text
-Checkout → Install Dependencies → Build → SSH Deploy → Restart Nuxt → Health Check
+Checkout → 配置 SSH → rsync 上传源代码 → Install Dependencies
+→ Prisma Migrate Deploy → Build → PM2 Start/Reload → Health Check
 ```
 
-**GitHub Secrets**（至少配置，敏感信息不写入代码仓库）：`SERVER_HOST`、`SERVER_USER`、`SERVER_SSH_KEY`、`SERVER_PORT`
+**GitHub Secrets**（敏感信息不写入代码仓库）：`SERVER_HOST`、`SERVER_USER`、`SERVER_SSH_KEY`、`SERVER_KNOWN_HOSTS`
 
 **环境变量**（`.env` 禁止上传）：
 
@@ -787,18 +792,18 @@ V1 暂不作为核心需求。后续如需要，推荐考虑 **Giscus + GitHub D
 
 > 原文档中「开发优先级（P0/P1/P2）」「开发阶段（Phase 1-8）」「V1 验收标准」三部分内容重叠但相互独立列出，容易在排期时对不上号。以下按 Phase 顺序合并为一张表，同时标注优先级与对应验收标准。
 
-| Phase | 交付内容 | 优先级 | 对应验收标准 |
-|---|---|---|---|
-| **Phase 1**　基础架构 | Nuxt 4 / TypeScript / PostgreSQL / Prisma 初始化、项目目录、Environment、基础 UI | P0 | （基础设施，无独立验收项） |
-| **Phase 2**　认证 | 后台登录、Session、路由保护、API 权限 | P0 | 可正常登录；未登录用户无法访问后台 |
-| **Phase 3**　文章核心 | 文章 CRUD、Vditor、Markdown Storage、手动保存并发布 | P0 | 可新建文章 / 复制粘贴 Markdown / 实时预览 / 手动保存并发布 / 直接编辑已发布文章并在保存后即时生效 / 物理删除文章；系统无草稿和自动保存功能 |
-| **Phase 4**　博客前台 | 前台公开 API（Part F.3.1）、首页、Blog 列表、文章详情、Tags、Projects、About | P0 | 首页正常访问并展示最近文章 / 项目 / 技术栈；文章列表与详情正常；Markdown 正确渲染；代码正确高亮；图片 URL 正确显示；标签 / Projects / About 页面正常；手机端布局正常 |
-| **Phase 5**　后台管理 | Dashboard、标签管理、项目管理、网站设置 | 标签 / 项目管理为 P0，Dashboard 为 P1 | 可管理标签 / 项目 |
-| **Phase 6**　统计 | `Post.viewCount` 自增、`SiteStats.totalViews` 全站访问计数器、Dashboard 总访问量 + Top 5 文章 | P1 | 可查看全站总访问量与浏览量 Top 5 文章 |
-| **Phase 7**　SEO | Meta / Open Graph / Canonical（P0 基础 SEO）；Sitemap / Robots（P1） | P0 + P1 | 页面具有正确 Title / Description；Article 支持独立 SEO；sitemap.xml / robots.txt 可访问 |
-| **Phase 8**　部署 | Tencent Cloud、Nginx、HTTPS、PM2、GitHub Actions、Health Check | P0 | 腾讯云服务器可正常访问网站；HTTPS 正常；Nuxt 服务与数据库稳定运行；Push main 触发 GitHub Actions 并完成 Build；构建成功后自动部署，部署完成后网站自动更新；文章发布不需要 Git Commit |
+| Phase | 交付内容 | 优先级 | 当前状态 | 对应验收标准 |
+|---|---|---|---|---|
+| **Phase 1**　基础架构 | Nuxt 4 / TypeScript / PostgreSQL / Prisma 初始化、项目目录、Environment、基础 UI | P0 | ✅ 已完成 | 生产构建通过，数据库迁移可部署 |
+| **Phase 2**　认证 | 后台登录、Session、路由保护、API 权限 | P0 | ✅ 已完成 | 可正常登录；未登录用户无法访问后台 |
+| **Phase 3**　文章核心 | 文章 CRUD、Vditor、Markdown Storage、手动保存并发布 | P0 | ✅ 已完成 | 可新建、编辑、归档、重新发布和物理删除；无草稿和自动保存 |
+| **Phase 4**　博客前台 | 公开 API、首页、Blog 列表、文章详情、Tags、Projects、About | P0 | ✅ 已完成 | Markdown 安全渲染、代码高亮、TOC、图片 URL、分页和移动端布局正常 |
+| **Phase 5**　后台管理 | Dashboard、标签管理、项目管理、网站设置 | P0 + P1 | ✅ 已完成 | 可管理文章、标签、项目和站点设置；Dashboard 可读取核心数据 |
+| **Phase 6**　统计 | `Post.viewCount`、`SiteStats.totalViews`、Dashboard 总访问量与 Top 5 | P1 | ✅ 已完成 | 原子自增生效，可查看全站总访问量与热门文章 |
+| **Phase 7**　SEO | Meta / Open Graph、Sitemap、Robots | P0 + P1 | 🟡 基础完成 | 页面 Meta、文章独立 SEO、sitemap.xml、robots.txt 已完成；Canonical/Twitter Card 仍需专项验收与补齐 |
+| **Phase 8**　部署 | Tencent Cloud、Nginx、HTTPS、PM2、GitHub Actions、Health Check | P0 | ✅ 已完成 | `https://carreyda.com` 正常；Push main 自动部署；数据库和公网健康检查通过 |
 
-**跨阶段 P1 增强项**（在对应 Phase 基础功能稳定后补充）：文章搜索、Dark Mode、上一篇 / 下一篇、相关文章
+**跨阶段 P1 增强项**：文章搜索和系统深浅色适配已完成；手动主题切换、上一篇 / 下一篇、相关文章、阅读进度待实现。
 
 **P2 未来扩展**（不纳入 V1 路线图，仅作为后续参考）：Category 分类体系、定时发布、文章版本历史、Mermaid、LaTeX、评论、AI 写作辅助、全文搜索、带趋势图的高级统计、复杂缓存、Webhook、API Token
 
@@ -810,12 +815,62 @@ V1 完成后可以逐步增加：Category 分类体系、定时发布、文章�
 
 ---
 
+# Part M　当前实现状态与已知差异
+
+## M.1 生产状态（截至 2026-08-29）
+
+| 项目 | 当前状态 |
+|---|---|
+| 正式地址 | `https://carreyda.com` |
+| 规范域名 | `carreyda.com`；HTTP 与 `www` 自动 301 跳转 |
+| 云服务器 | Tencent Cloud CVM / Ubuntu Server 24.04 LTS |
+| 数据库 | 服务器本地 PostgreSQL 16，应用使用独立低权限角色与 `blog_prod` 数据库 |
+| 应用进程 | PM2 Fork 单实例，由 `pm2-ubuntu` systemd 服务开机恢复 |
+| Web 入口 | Nginx 反向代理至 `127.0.0.1:3000` |
+| HTTPS | 腾讯云 TrustAsia DV TLS 证书，覆盖根域名与 `www` |
+| 自动部署 | Push `main` 触发 GitHub Actions；上传、迁移、构建、重载和健康检查自动完成 |
+| 健康检查 | `/api/health` 返回应用状态与数据库连接状态 |
+| 部署文档 | 根目录 `DEPLOYMENT.md` |
+
+## M.2 已确认且不得回退的产品决策
+
+1. 不提供自动保存。
+2. 不提供草稿状态；新建保存即发布。
+3. 文章、标签和项目删除采用物理删除，不设计恢复站。
+4. 文章正文以 Markdown 原文存入 PostgreSQL，不生成 `.md` 内容文件。
+5. 项目只有外链卡片，不提供站内项目详情、Slug 或详细描述。
+6. 图片使用外部 URL；V1 不做媒体库和对象存储上传。
+7. 浏览量采用简单计数，接受刷新、机器人和重复访问，不做访客去重。
+8. 主题主色保持 `#4493f8`。
+9. 不使用需要联网获取的第三方字体，优先使用系统字体栈。
+
+## M.3 已实现但与原始设想有所调整
+
+- 深浅色当前通过 `prefers-color-scheme` 自动跟随系统，并非完整的三态手动切换器。
+- 文章详情已实现服务端 Markdown 渲染、白名单清洗、Shiki 高亮、代码复制和 TOC；上一篇、下一篇、相关文章、阅读进度尚未实现。
+- 生产 HTTPS 使用腾讯云证书，而不是最初设想的 Let's Encrypt。
+- GitHub Actions 在服务器端完成依赖安装和构建，不上传本地 `.output`、`.env` 或 `node_modules`。
+- 项目生产域名已经确定为 `carreyda.com`，不再属于待定项。
+
+## M.4 下一迭代建议顺序
+
+| 顺序 | 工作项 | 原因 |
+|---|---|---|
+| 1 | 证书续期部署自动化与到期监控 | 当前证书 2026-10-03 到期，属于上线可靠性事项 |
+| 2 | Canonical、Twitter Card 与结构化数据专项检查 | 完成 SEO 闭环并避免重复域名收录 |
+| 3 | 数据库定时备份、异地保存与恢复演练 | 文章仅存于 PostgreSQL，备份属于核心数据安全能力 |
+| 4 | 上一篇 / 下一篇、相关文章 | 提升文章间导航和内容发现能力 |
+| 5 | 阅读进度与三态主题切换 | 改善长文阅读体验和个性化体验 |
+| 6 | 自动化测试与部署后冒烟测试扩充 | 降低后续持续迭代的回归风险 |
+
+---
+
 ## 当前最终方案
 
 ```text
 Nuxt 4 + TypeScript + Vue 3 + Nuxt Nitro + Nuxt UI + PostgreSQL + Prisma
 + Vditor + Markdown + markdown-it + Shiki
-+ Nginx + PM2 + GitHub Actions + Tencent Cloud CVM
++ Nginx + PM2 + GitHub Actions + Tencent Cloud CVM + 腾讯云 TLS 证书
 ```
 
 内容管理原则：**代码归 GitHub，内容归 PostgreSQL，文章以 Markdown 为标准格式。**
