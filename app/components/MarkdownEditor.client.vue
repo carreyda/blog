@@ -8,9 +8,16 @@ const container = useTemplateRef('container')
 let editor: VditorType | null = null
 
 onMounted(async () => {
-  const { default: Vditor } = await import('vditor')
+  const [{ default: Vditor }] = await Promise.all([
+    import('vditor'),
+    import('vditor/dist/js/i18n/zh_CN.js'),
+  ])
   if (!container.value) return
+  const i18n = (window as Window & { VditorI18n?: IOptions['i18n'] }).VditorI18n
+  if (!i18n) throw new Error('Vditor Chinese language pack failed to load')
   editor = new Vditor(container.value, {
+    i18n,
+    lang: 'zh_CN',
     value: props.modelValue,
     mode: 'sv',
     height: 720,
