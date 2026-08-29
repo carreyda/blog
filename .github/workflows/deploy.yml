@@ -62,16 +62,20 @@ jobs:
             pm2 startOrReload ecosystem.config.cjs --update-env
             pm2 save
 
+            health_response=''
             for attempt in $(seq 1 30); do
               if health_response=$(curl --fail --silent --show-error --max-time 5 http://127.0.0.1:3000/api/health 2>/dev/null); then
-                printf '%s\n' "$health_response"
-                exit 0
+                break
               fi
               echo "Waiting for application health check ($attempt/30)..."
               sleep 2
             done
 
-            echo "Application did not become healthy within 60 seconds."
-            pm2 logs personal-blog --lines 50 --nostream
-            exit 1
+            if [ -z "$health_response" ]; then
+              echo "Application did not become healthy within 60 seconds."
+              pm2 logs personal-blog --lines 50 --nostream
+              exit 1
+            fi
+
+            printf '%s\n' "$health_response"
           REMOTE
