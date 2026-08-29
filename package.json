@@ -4,6 +4,7 @@
   "private": true,
   "packageManager": "pnpm@11.19.0",
   "scripts": {
+    "prebuild": "node scripts/copy-vditor-assets.mjs",
     "build": "prisma generate && nuxt build",
     "dev": "nuxt dev",
     "generate": "nuxt generate",

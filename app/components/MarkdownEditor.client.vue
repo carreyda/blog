@@ -16,6 +16,7 @@ onMounted(async () => {
   const i18n = (window as Window & { VditorI18n?: IOptions['i18n'] }).VditorI18n
   if (!i18n) throw new Error('Vditor Chinese language pack failed to load')
   editor = new Vditor(container.value, {
+    cdn: '/vendor/vditor',
     i18n,
     lang: 'zh_CN',
     value: props.modelValue,
