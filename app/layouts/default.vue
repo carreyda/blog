@@ -11,12 +11,15 @@ const siteName = computed(() => settingsResponse.value?.data.siteName || 'Blog')
         <span>{{ siteName }}</span>
       </NuxtLink>
 
-      <nav class="site-nav" aria-label="主导航">
-        <NuxtLink to="/">首页</NuxtLink>
-        <NuxtLink to="/blog">文章</NuxtLink>
-        <NuxtLink to="/projects">项目</NuxtLink>
-        <NuxtLink to="/about">关于</NuxtLink>
-      </nav>
+      <div class="site-header-actions">
+        <nav class="site-nav" aria-label="主导航">
+          <NuxtLink to="/">首页</NuxtLink>
+          <NuxtLink to="/blog">文章</NuxtLink>
+          <NuxtLink to="/projects">项目</NuxtLink>
+          <NuxtLink to="/about">关于</NuxtLink>
+        </nav>
+        <ColorModeSwitcher />
+      </div>
     </header>
 
     <main class="site-main">

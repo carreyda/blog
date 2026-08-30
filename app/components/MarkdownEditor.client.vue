@@ -5,6 +5,7 @@ import type VditorType from 'vditor'
 const props = defineProps<{ modelValue: string }>()
 const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
 const container = useTemplateRef('container')
+const colorMode = useColorMode()
 let editor: VditorType | null = null
 
 onMounted(async () => {
@@ -21,6 +22,7 @@ onMounted(async () => {
     lang: 'zh_CN',
     value: props.modelValue,
     mode: 'sv',
+    theme: colorMode.value === 'dark' ? 'dark' : 'classic',
     height: 720,
     cache: { enable: false },
     counter: { enable: true, type: 'text' },
@@ -37,6 +39,10 @@ onMounted(async () => {
 
 watch(() => props.modelValue, (value) => {
   if (editor && editor.getValue() !== value) editor.setValue(value)
+})
+
+watch(() => colorMode.value, (value) => {
+  editor?.setTheme(value === 'dark' ? 'dark' : 'classic')
 })
 
 onBeforeUnmount(() => editor?.destroy())
