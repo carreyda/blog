@@ -23,7 +23,7 @@ export async function renderMarkdown(markdown: string) {
   const usedIds = new Map<string, number>()
   const toc: { id: string; text: string; level: number }[] = []
   const md = new MarkdownIt({
-    html: false,
+    html: true,
     linkify: true,
     typographer: false,
     highlight(code, language) {
@@ -62,15 +62,28 @@ export async function renderMarkdown(markdown: string) {
     allowedTags: [
       'p', 'br', 'hr', 'strong', 'em', 's', 'blockquote', 'ul', 'ol', 'li',
       'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a', 'img', 'table', 'thead', 'tbody',
-      'tr', 'th', 'td', 'pre', 'code', 'span', 'input',
+      'tr', 'th', 'td', 'pre', 'code', 'span', 'input', 'picture', 'source',
+      'div', 'details', 'summary', 'kbd', 'sub', 'sup',
     ],
     allowedAttributes: {
-      a: ['href', 'title', 'rel'], img: ['src', 'alt', 'title', 'loading'],
-      h1: ['id'], h2: ['id'], h3: ['id'], h4: ['id'], h5: ['id'], h6: ['id'],
+      a: ['href', 'title', 'rel', { name: 'target', values: ['_blank', '_self'] }],
+      p: [{ name: 'align', values: ['left', 'center', 'right'] }],
+      div: [{ name: 'align', values: ['left', 'center', 'right'] }],
+      img: ['src', 'srcset', 'alt', 'title', 'width', 'height', 'loading'],
+      source: ['src', 'srcset', 'media', 'type', 'sizes'],
+      details: ['open'],
+      h1: ['id', { name: 'align', values: ['left', 'center', 'right'] }],
+      h2: ['id', { name: 'align', values: ['left', 'center', 'right'] }],
+      h3: ['id', { name: 'align', values: ['left', 'center', 'right'] }],
+      h4: ['id', { name: 'align', values: ['left', 'center', 'right'] }],
+      h5: ['id', { name: 'align', values: ['left', 'center', 'right'] }],
+      h6: ['id', { name: 'align', values: ['left', 'center', 'right'] }],
       code: ['class'], pre: ['class', 'style'], span: ['class', 'style'], input: ['type', 'checked', 'disabled'],
       th: ['align'], td: ['align'],
     },
+    allowedSchemes: ['http', 'https'],
     allowedSchemesByTag: { a: ['http', 'https', 'mailto'], img: ['http', 'https'] },
+    selfClosing: ['img', 'br', 'hr', 'input', 'source'],
     allowedStyles: {
       pre: { 'background-color': [/^#[0-9a-f]{3,8}$/i], color: [/^#[0-9a-f]{3,8}$/i] },
       span: { color: [/^#[0-9a-f]{3,8}$/i], 'background-color': [/^#[0-9a-f]{3,8}$/i] },
