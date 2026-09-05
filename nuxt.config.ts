@@ -5,6 +5,11 @@ export default defineNuxtConfig({
   ui: {
     fonts: false,
   },
+  icon: {
+    clientBundle: {
+      scan: true,
+    },
+  },
   css: ['~/assets/css/main.css'],
   runtimeConfig: {
     databaseUrl: process.env.DATABASE_URL || '',

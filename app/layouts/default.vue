@@ -1,6 +1,8 @@
 <script setup lang="ts">
 const { data: settingsResponse } = await useFetch<any>('/api/settings')
 const siteName = computed(() => settingsResponse.value?.data.siteName || 'Blog')
+const route = useRoute()
+const isArticlePage = computed(() => /^\/blog\/[^/]+\/?$/.test(route.path))
 </script>
 
 <template>
@@ -22,7 +24,7 @@ const siteName = computed(() => settingsResponse.value?.data.siteName || 'Blog')
       </div>
     </header>
 
-    <main class="site-main">
+    <main class="site-main" :class="{ 'site-main--article': isArticlePage }">
       <slot />
     </main>
 
