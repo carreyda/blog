@@ -1,6 +1,10 @@
 <script setup lang="ts">
 type ColorModePreference = 'system' | 'light' | 'dark'
 
+withDefaults(defineProps<{ variant?: 'default' | 'admin' }>(), {
+  variant: 'default',
+})
+
 const colorMode = useColorMode()
 const options: { value: ColorModePreference; label: string }[] = [
   { value: 'system', label: '跟随系统' },
@@ -15,7 +19,7 @@ function selectMode(mode: ColorModePreference) {
 
 <template>
   <ClientOnly>
-    <div class="color-mode-switcher" role="group" aria-label="显示模式">
+    <div class="color-mode-switcher" :class="{ 'color-mode-switcher--admin': variant === 'admin' }" role="group" aria-label="显示模式">
       <button
         v-for="option in options"
         :key="option.value"
@@ -99,4 +103,30 @@ button svg {
   height: 33px;
   visibility: hidden;
 }
+
+.color-mode-switcher--admin {
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 7px;
+  background: var(--color-background);
+}
+
+.color-mode-switcher--admin button {
+  width: 100%;
+  height: 48px;
+  border-right: 1px solid var(--color-border);
+  border-radius: 0;
+}
+
+.color-mode-switcher--admin button:last-child { border-right: 0; }
+.color-mode-switcher--admin button[aria-pressed="true"] {
+  border-radius: 6px;
+  color: var(--color-primary);
+  box-shadow: inset 0 0 0 1.5px var(--color-primary);
+}
+.color-mode-switcher--admin button svg { width: 20px; height: 20px; }
 </style>
