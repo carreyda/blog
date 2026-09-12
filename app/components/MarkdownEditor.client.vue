@@ -1,18 +1,16 @@
 <script setup lang="ts">
+import Vditor from 'vditor'
 import 'vditor/dist/index.css'
-import type VditorType from 'vditor'
+import 'vditor/dist/js/i18n/zh_CN.js'
 
 const props = defineProps<{ modelValue: string }>()
 const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
 const container = useTemplateRef('container')
 const colorMode = useColorMode()
-let editor: VditorType | null = null
+const ready = ref(false)
+let editor: Vditor | null = null
 
-onMounted(async () => {
-  const [{ default: Vditor }] = await Promise.all([
-    import('vditor'),
-    import('vditor/dist/js/i18n/zh_CN.js'),
-  ])
+onMounted(() => {
   if (!container.value) return
   const i18n = (window as Window & { VditorI18n?: IOptions['i18n'] }).VditorI18n
   if (!i18n) throw new Error('Vditor Chinese language pack failed to load')
@@ -33,6 +31,9 @@ onMounted(async () => {
       'quote', 'link', 'table', 'code', 'inline-code', '|',
       'undo', 'redo', 'fullscreen', 'preview', 'outline', 'help',
     ],
+    after: () => {
+      ready.value = true
+    },
     input: value => emit('update:modelValue', value),
   })
 })
@@ -45,7 +46,10 @@ watch(() => colorMode.value, (value) => {
   editor?.setTheme(value === 'dark' ? 'dark' : 'classic')
 })
 
-onBeforeUnmount(() => editor?.destroy())
+onBeforeUnmount(() => {
+  editor?.destroy()
+  editor = null
+})
 
 function insertImage(url: string, description: string) {
   editor?.insertValue(`![${description.replaceAll(']', '\\]')}](${url})`)
@@ -54,8 +58,55 @@ function insertImage(url: string, description: string) {
 defineExpose({ insertImage })
 </script>
 
-<template><div ref="container" class="markdown-editor" /></template>
+<template>
+  <div class="markdown-editor-shell" :class="{ 'is-ready': ready }">
+    <div ref="container" class="markdown-editor" />
+    <div v-if="!ready" class="editor-boot" role="status" aria-live="polite">
+      <UIcon name="i-lucide-loader-circle" aria-hidden="true" />
+      <span>正在准备 Markdown 编辑器…</span>
+    </div>
+  </div>
+</template>
 
 <style scoped>
-.markdown-editor { width: 100%; min-width: 0; }
+.markdown-editor-shell {
+  position: relative;
+  width: 100%;
+  min-height: 720px;
+  overflow: hidden;
+  border-radius: 0 0 8px 8px;
+  background: var(--color-background-secondary);
+}
+
+.markdown-editor {
+  width: 100%;
+  min-width: 0;
+}
+
+.editor-boot {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--color-text-secondary);
+  background: var(--color-background-secondary);
+  font-size: 13px;
+}
+
+.editor-boot svg {
+  width: 18px;
+  height: 18px;
+  animation: editor-spin .9s linear infinite;
+}
+
+.is-ready {
+  background: transparent;
+}
+
+@keyframes editor-spin {
+  to { transform: rotate(360deg); }
+}
 </style>
