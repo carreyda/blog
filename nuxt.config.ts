@@ -6,6 +6,7 @@ export default defineNuxtConfig({
     fonts: false,
   },
   icon: {
+    mode: 'svg',
     clientBundle: {
       scan: true,
       icons: [
