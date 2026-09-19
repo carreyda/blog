@@ -24,6 +24,7 @@ const isArticlePage = computed(() => /^\/blog\/[^/]+\/?$/.test(route.path))
           <NuxtLink to="/">首页</NuxtLink>
           <NuxtLink to="/blog">文章</NuxtLink>
           <NuxtLink to="/projects">项目</NuxtLink>
+          <NuxtLink to="/bookmarks">收藏</NuxtLink>
           <NuxtLink to="/about">关于</NuxtLink>
         </nav>
         <ColorModeSwitcher />

@@ -112,3 +112,36 @@ model SiteStats {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 }
+
+model BookmarkCategory {
+  id        Int                @id @default(autoincrement())
+  name      String             @db.VarChar(50)
+  parentId  Int?
+  parent    BookmarkCategory?  @relation("BookmarkCategoryParent", fields: [parentId], references: [id], onDelete: Restrict)
+  children  BookmarkCategory[] @relation("BookmarkCategoryParent")
+  sort      Int                @default(0)
+  bookmarks Bookmark[]
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  @@unique([parentId, name])
+  @@index([parentId, sort])
+  @@index([sort, id])
+}
+
+model Bookmark {
+  id          Int              @id @default(autoincrement())
+  categoryId  Int
+  category    BookmarkCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  name        String           @db.VarChar(100)
+  description String           @db.VarChar(500)
+  iconUrl     String?          @db.VarChar(2048)
+  url         String           @unique @db.VarChar(2048)
+  sort        Int              @default(0)
+  isVisible   Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([categoryId, sort])
+  @@index([isVisible, sort])
+}

@@ -13,6 +13,7 @@ const navigation = [
       { label: '文章管理', to: '/admin/posts', icon: 'i-lucide-notebook-text' },
       { label: '标签管理', to: '/admin/tags', icon: 'i-lucide-tag' },
       { label: '项目管理', to: '/admin/projects', icon: 'i-lucide-panels-top-left' },
+      { label: '收藏管理', to: '/admin/bookmarks', icon: 'i-lucide-bookmark' },
     ],
   },
   { label: '', divider: true, items: [{ label: '网站设置', to: '/admin/settings', icon: 'i-lucide-settings' }] },
