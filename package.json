@@ -34,8 +34,8 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@iconify-json/logos": "^1.2.14",
     "@iconify-json/lucide": "^1.2.129",
-    "@iconify-json/simple-icons": "^1.2.96",
     "@types/markdown-it": "^14.2.0",
     "@types/node": "^26.2.0",
     "@types/sanitize-html": "^2.16.1",
