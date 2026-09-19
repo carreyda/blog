@@ -30,6 +30,7 @@ export default defineNuxtConfig({
         'lucide:pen-line',
         'lucide:loader-circle',
         'lucide:code-2',
+        'lucide:search',
         'logos:nuxt-icon',
         'logos:typescript-icon',
         'logos:postgresql',
