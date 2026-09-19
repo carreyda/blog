@@ -1,6 +1,9 @@
 <script setup lang="ts">
 const { data: settingsResponse } = await useFetch<any>('/api/settings')
 const siteName = computed(() => settingsResponse.value?.data.siteName || 'Blog')
+const logoUrl = computed(() => settingsResponse.value?.data.logoUrl || '')
+const logoLoadFailed = ref(false)
+watch(logoUrl, () => { logoLoadFailed.value = false })
 const route = useRoute()
 const isArticlePage = computed(() => /^\/blog\/[^/]+\/?$/.test(route.path))
 </script>
@@ -9,7 +12,10 @@ const isArticlePage = computed(() => /^\/blog\/[^/]+\/?$/.test(route.path))
   <div class="site-shell">
     <header class="site-header">
       <NuxtLink class="brand" to="/" aria-label="返回首页">
-        <span class="brand-mark" aria-hidden="true"><i /><i /></span>
+        <span class="brand-mark" :class="{ 'brand-mark--image': logoUrl && !logoLoadFailed }" aria-hidden="true">
+          <img v-if="logoUrl && !logoLoadFailed" :src="logoUrl" alt="" @error="logoLoadFailed = true">
+          <template v-else><i /><i /></template>
+        </span>
         <span>{{ siteName }}</span>
       </NuxtLink>
 
