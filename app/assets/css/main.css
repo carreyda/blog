@@ -103,7 +103,7 @@ a { color: inherit; text-decoration: none; }
   content: "";
 }
 
-.site-main { width: min(100% - 32px, 650px); margin: 64px auto 72px; flex: 1; }
+.site-main { width: min(calc(100% - 64px), 1200px); margin: 64px auto 72px; flex: 1; }
 .site-main--article { width: min(calc(100% - 40px), 880px); }
 .site-footer { color: var(--color-text-secondary); font-size: 11.5px; }
 .hero { margin-bottom: 45px; }
