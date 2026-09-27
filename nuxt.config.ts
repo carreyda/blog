@@ -40,6 +40,7 @@ export default defineNuxtConfig({
         'logos:vue',
         'logos:react',
         'simple-icons:github',
+        'simple-icons:nextdotjs',
         'simple-icons:twitter',
         'simple-icons:linkedin',
         'simple-icons:juejin',
