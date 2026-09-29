@@ -9,6 +9,7 @@ const container = useTemplateRef('container')
 const colorMode = useColorMode()
 const ready = ref(false)
 let editor: Vditor | null = null
+const mermaidIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="6" height="5" rx="1"/><rect x="15" y="3" width="6" height="5" rx="1"/><rect x="9" y="16" width="6" height="5" rx="1"/><path d="M6 8v3h6m6-3v3h-6m0 0v5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>'
 
 onMounted(() => {
   if (!container.value) return
@@ -28,7 +29,14 @@ onMounted(() => {
     toolbar: [
       'headings', 'bold', 'italic', 'strike', '|',
       'list', 'ordered-list', 'check', 'outdent', 'indent', '|',
-      'quote', 'link', 'table', 'code', 'inline-code', '|',
+      'quote', 'link', 'table', 'code', 'inline-code',
+      {
+        name: 'mermaid',
+        tip: '插入 Mermaid 图表',
+        icon: mermaidIcon,
+        click: () => editor?.insertValue('\n```mermaid\nflowchart TD\n  A[开始] --> B[结束]\n```\n'),
+      },
+      '|',
       'undo', 'redo', 'fullscreen', 'preview', 'outline', 'help',
     ],
     after: () => {

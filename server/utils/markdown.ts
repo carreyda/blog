@@ -11,6 +11,10 @@ function slugify(value: string) {
   return value.toLowerCase().trim().replace(/[^\p{L}\p{N}\s-]/gu, '').replace(/[\s_-]+/g, '-').replace(/^-|-$/g, '') || 'section'
 }
 
+function escapeDiagramSource(value: string) {
+  return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
+}
+
 export function readingMinutes(markdown: string) {
   const plain = markdown.replace(/```[\s\S]*?```/g, ' ').replace(/`[^`]*`/g, ' ').replace(/!?(?:\[[^\]]*\])\([^)]*\)/g, ' ')
   const cjk = plain.match(/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/gu)?.length || 0
@@ -27,7 +31,11 @@ export async function renderMarkdown(markdown: string) {
     linkify: true,
     typographer: false,
     highlight(code, language) {
-      const lang = language && highlighter.getLoadedLanguages().includes(language as any) ? language : 'text'
+      const normalizedLanguage = language.trim().toLowerCase()
+      if (normalizedLanguage === 'mermaid') {
+        return `<pre class="language-mermaid">${escapeDiagramSource(code)}</pre>`
+      }
+      const lang = normalizedLanguage && highlighter.getLoadedLanguages().includes(normalizedLanguage as any) ? normalizedLanguage : 'text'
       return highlighter.codeToHtml(code, { lang, theme: 'github-dark' })
     },
   })
