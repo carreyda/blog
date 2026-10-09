@@ -77,7 +77,7 @@ export async function renderMarkdown(markdown: string) {
       a: ['href', 'title', 'rel', { name: 'target', values: ['_blank', '_self'] }],
       p: [{ name: 'align', values: ['left', 'center', 'right'] }],
       div: [{ name: 'align', values: ['left', 'center', 'right'] }],
-      img: ['src', 'srcset', 'alt', 'title', 'width', 'height', 'loading'],
+      img: ['src', 'srcset', 'alt', 'title', 'width', 'height', 'loading', 'referrerpolicy'],
       source: ['src', 'srcset', 'media', 'type', 'sizes'],
       details: ['open'],
       h1: ['id', { name: 'align', values: ['left', 'center', 'right'] }],
@@ -98,7 +98,8 @@ export async function renderMarkdown(markdown: string) {
     },
     transformTags: {
       a: sanitizeHtml.simpleTransform('a', { rel: 'noopener noreferrer' }, true),
-      img: sanitizeHtml.simpleTransform('img', { loading: 'lazy' }, true),
+      // External image hosts may reject requests carrying this site's Referer.
+      img: sanitizeHtml.simpleTransform('img', { loading: 'lazy', referrerpolicy: 'no-referrer' }, true),
     },
   })
   return { html, toc }
