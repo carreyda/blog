@@ -26,7 +26,7 @@ useSeoMeta({
       <img v-if="post.coverImageUrl" class="cover" :src="post.coverImageUrl" :alt="post.title">
     </header>
     <nav v-if="post.toc.length" class="toc" aria-label="文章目录"><strong>目录</strong><a v-for="item in post.toc" :key="item.id" :href="`#${item.id}`" :style="{ paddingLeft: `${(item.level - 2) * 14}px` }">{{ item.text }}</a></nav>
-    <div class="markdown-body" v-html="post.contentHtml" />
+    <ArticleImagePreview :html="post.contentHtml" />
   </article>
 </template>
 
