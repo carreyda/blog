@@ -13,6 +13,7 @@ type Post = {
 }
 
 const props = defineProps<{ post?: Post }>()
+const { notifySuccess, notifyError } = useAdminFeedback()
 const session = useState<{ csrfToken: string } | null>('admin-session')
 const editor = useTemplateRef<{ insertImage: (url: string, description: string) => void }>('editor')
 const form = reactive({
@@ -23,7 +24,6 @@ const form = reactive({
   status: props.post?.status || 'PUBLISHED' as 'PUBLISHED' | 'ARCHIVED',
 })
 const pending = ref(false)
-const errorMessage = ref('')
 const { data: tagResponse } = await useFetch<{ data: Tag[] }>('/api/admin/tags')
 const tags = computed(() => tagResponse.value?.data || [])
 const wordCount = computed(() => form.contentMarkdown.trim() ? form.contentMarkdown.trim().split(/\s+/).length : 0)
@@ -32,8 +32,9 @@ const readingTime = computed(() => Math.max(1, Math.ceil(wordCount.value / 250))
 async function save(status = form.status) {
   if (pending.value || !session.value) return
   pending.value = true
-  errorMessage.value = ''
   try {
+    const successMessage = !props.post ? '文章已发布'
+      : status !== form.status ? (status === 'ARCHIVED' ? '文章已下线' : '文章已重新发布') : '文章已保存'
     const { status: _currentStatus, ...content } = form
     const body = props.post ? { ...content, status } : content
     const response: any = props.post
@@ -41,16 +42,27 @@ async function save(status = form.status) {
       : await $fetch('/api/admin/posts', { method: 'POST', body, headers: { 'X-CSRF-Token': session.value.csrfToken } })
     form.status = status
     await navigateTo(`/admin/posts/${response.data.id}/edit`)
-  } catch (error: any) {
-    errorMessage.value = error?.data?.error?.message || '保存失败，页面内容已保留，请重试'
+    notifySuccess(successMessage)
+  } catch (error) {
+    notifyError(error, '操作失败，文章内容已保留')
   } finally { pending.value = false }
 }
 
 function insertImage() {
-  const url = window.prompt('图片地址（仅支持 http/https）')?.trim()
-  if (!url || !/^https?:\/\//i.test(url)) return
+  const input = window.prompt('图片地址（仅支持 http/https）')
+  if (input === null) return
+  const url = input.trim()
+  if (!url || !/^https?:\/\//i.test(url)) {
+    notifyError(new Error('请输入有效的 http/https 图片地址。'), '插入图片失败')
+    return
+  }
+  if (!editor.value) {
+    notifyError(new Error('请等待 Markdown 编辑器加载完成后重试。'), '插入图片失败')
+    return
+  }
   const description = window.prompt('图片描述')?.trim() || '图片'
-  editor.value?.insertImage(url, description)
+  editor.value.insertImage(url, description)
+  notifySuccess('图片已插入')
 }
 
 function shortcut(event: KeyboardEvent) {
@@ -96,7 +108,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
         <template #header><div class="side-heading"><span>发布设置</span><UIcon name="i-lucide-send" /></div></template>
         <div class="option-stack">
           <div class="publish-state"><span class="status-dot" :class="{ 'status-dot--muted': form.status === 'ARCHIVED' }" /><div><strong>{{ form.status === 'PUBLISHED' ? '公开发布' : '已下线' }}</strong><p>{{ form.status === 'PUBLISHED' ? '文章对所有访客可见' : '文章仅在后台保留' }}</p></div></div>
-          <UAlert v-if="errorMessage" color="error" variant="soft" :description="errorMessage" />
           <UButton type="submit" block size="lg" icon="i-lucide-save" :loading="pending">{{ props.post ? '保存修改' : '保存并发布' }}</UButton>
           <UButton v-if="props.post && form.status === 'PUBLISHED'" type="button" block color="neutral" variant="outline" :loading="pending" @click="save('ARCHIVED')">下线文章</UButton>
           <UButton v-if="props.post && form.status === 'ARCHIVED'" type="button" block color="primary" variant="outline" :loading="pending" @click="save('PUBLISHED')">重新发布</UButton>

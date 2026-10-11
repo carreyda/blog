@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const session = useState<{ csrfToken: string; user: { id: number; username: string; role: 'ADMIN' } } | null>('admin-session', () => null)
 const loggingOut = ref(false)
+const { notifySuccess, notifyError } = useAdminFeedback()
 const mobileNavOpen = ref(false)
 const accountMenuOpen = ref(false)
 const route = useRoute()
@@ -48,13 +49,16 @@ onMounted(() => {
 })
 
 async function logout() {
-  if (!session.value) return
+  if (!session.value || loggingOut.value) return
   loggingOut.value = true
   try {
     await $fetch('/api/auth/logout', { method: 'POST', headers: { 'X-CSRF-Token': session.value.csrfToken } })
-  } finally {
     session.value = null
     await navigateTo('/admin/login')
+    notifySuccess('已退出登录')
+  } catch (error) {
+    notifyError(error, '退出登录失败')
+  } finally {
     loggingOut.value = false
   }
 }

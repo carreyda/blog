@@ -4,6 +4,8 @@ useSeoMeta({ title: '文章管理' })
 
 type Post = { id: number; title: string; status: 'PUBLISHED' | 'ARCHIVED'; viewCount: number; publishedAt: string; updatedAt: string; tags: { id: number; name: string }[] }
 const session = useState<{ csrfToken: string } | null>('admin-session')
+const { notifySuccess, notifyError } = useAdminFeedback()
+const deletingId = ref<number | null>(null)
 const search = ref('')
 const status = ref('')
 const page = ref(1)
@@ -21,9 +23,17 @@ const formatDate = (value: string) => new Date(value).toLocaleDateString('zh-CN'
 watch([search, status], () => { page.value = 1 })
 
 async function remove(post: Post) {
-  if (!session.value || !window.confirm(`确定永久删除《${post.title}》吗？删除后无法恢复。`)) return
-  await $fetch(`/api/admin/posts/${post.id}`, { method: 'DELETE', headers: { 'X-CSRF-Token': session.value.csrfToken } })
-  await refresh()
+  if (!session.value || deletingId.value !== null || !window.confirm(`确定永久删除《${post.title}》吗？删除后无法恢复。`)) return
+  deletingId.value = post.id
+  try {
+    await $fetch(`/api/admin/posts/${post.id}`, { method: 'DELETE', headers: { 'X-CSRF-Token': session.value.csrfToken } })
+    await refresh()
+    notifySuccess('文章已删除')
+  } catch (error) {
+    notifyError(error, '删除文章失败')
+  } finally {
+    deletingId.value = null
+  }
 }
 </script>
 
@@ -66,7 +76,7 @@ async function remove(post: Post) {
               <td>
                 <div class="row-actions">
                   <UButton :to="`/admin/posts/${post.id}/edit`" icon="i-lucide-pencil" color="neutral" variant="ghost" square size="xs" :aria-label="`编辑 ${post.title}`" />
-                  <UButton icon="i-lucide-trash-2" color="error" variant="ghost" square size="xs" :aria-label="`删除 ${post.title}`" @click="remove(post)" />
+                  <UButton icon="i-lucide-trash-2" color="error" variant="ghost" square size="xs" :aria-label="`删除 ${post.title}`" :loading="deletingId === post.id" :disabled="deletingId !== null" @click="remove(post)" />
                 </div>
               </td>
             </tr>

@@ -9,43 +9,51 @@ const tags = computed(() => response.value?.data || [])
 const form = reactive({ name: '', slug: '' })
 const editingId = ref<number | null>(null)
 const pending = ref(false)
-const errorMessage = ref('')
+const { notifySuccess, notifyError } = useAdminFeedback()
+const deletingId = ref<number | null>(null)
 
 function edit(tag: Tag) {
   editingId.value = tag.id
   form.name = tag.name
   form.slug = tag.slug
-  errorMessage.value = ''
 }
 
 function reset() {
   editingId.value = null
   form.name = ''
   form.slug = ''
-  errorMessage.value = ''
 }
 
 async function save() {
-  if (!session.value) return
+  if (!session.value || pending.value) return
   pending.value = true
-  errorMessage.value = ''
   try {
+    const successMessage = editingId.value ? '标签已保存' : '标签已创建'
     const url = editingId.value ? `/api/admin/tags/${editingId.value}` : '/api/admin/tags'
     await $fetch(url, { method: editingId.value ? 'PUT' : 'POST', body: form, headers: { 'X-CSRF-Token': session.value.csrfToken } })
     reset()
     await refresh()
-  } catch (error: any) {
-    errorMessage.value = error?.data?.error?.message || '保存失败，请重试'
+    notifySuccess(successMessage)
+  } catch (error) {
+    notifyError(error, '保存标签失败')
   } finally {
     pending.value = false
   }
 }
 
 async function remove(tag: Tag) {
-  if (!session.value || !window.confirm(`确定删除标签“${tag.name}”吗？文章不会被删除。`)) return
-  await $fetch(`/api/admin/tags/${tag.id}`, { method: 'DELETE', headers: { 'X-CSRF-Token': session.value.csrfToken } })
-  if (editingId.value === tag.id) reset()
-  await refresh()
+  if (!session.value || deletingId.value !== null || !window.confirm(`确定删除标签“${tag.name}”吗？文章不会被删除。`)) return
+  deletingId.value = tag.id
+  try {
+    await $fetch(`/api/admin/tags/${tag.id}`, { method: 'DELETE', headers: { 'X-CSRF-Token': session.value.csrfToken } })
+    if (editingId.value === tag.id) reset()
+    await refresh()
+    notifySuccess('标签已删除')
+  } catch (error) {
+    notifyError(error, '删除标签失败')
+  } finally {
+    deletingId.value = null
+  }
 }
 </script>
 
@@ -61,7 +69,6 @@ async function remove(tag: Tag) {
         <form class="tag-form" @submit.prevent="save">
           <UFormField label="标签名称" required><UInput v-model="form.name" maxlength="50" placeholder="例如：Nuxt" class="w-full" /></UFormField>
           <UFormField label="Slug" hint="用于公开页面 URL，建议使用小写英文" required><UInput v-model="form.slug" maxlength="60" placeholder="例如：nuxt" class="w-full" /></UFormField>
-          <UAlert v-if="errorMessage" color="error" variant="soft" :description="errorMessage" />
           <div class="buttons"><UButton type="submit" :loading="pending" icon="i-lucide-check">{{ editingId ? '保存修改' : '创建标签' }}</UButton><UButton v-if="editingId" type="button" color="neutral" variant="ghost" @click="reset">取消</UButton></div>
         </form>
       </UCard>
@@ -74,7 +81,7 @@ async function remove(tag: Tag) {
           <div v-for="tag in tags" :key="tag.id" class="tag-row">
             <div class="tag-info"><span class="hash">#</span><span><strong>{{ tag.name }}</strong><code>/tags/{{ tag.slug }}</code></span></div>
             <span class="post-count">{{ tag.postCount }} 篇</span>
-            <div class="row-actions"><UButton icon="i-lucide-pencil" size="xs" color="neutral" variant="ghost" square :aria-label="`编辑 ${tag.name}`" @click="edit(tag)" /><UButton icon="i-lucide-trash-2" size="xs" color="error" variant="ghost" square :aria-label="`删除 ${tag.name}`" @click="remove(tag)" /></div>
+            <div class="row-actions"><UButton icon="i-lucide-pencil" size="xs" color="neutral" variant="ghost" square :aria-label="`编辑 ${tag.name}`" @click="edit(tag)" /><UButton icon="i-lucide-trash-2" size="xs" color="error" variant="ghost" square :aria-label="`删除 ${tag.name}`" :loading="deletingId === tag.id" :disabled="deletingId !== null" @click="remove(tag)" /></div>
           </div>
         </div>
       </UCard>

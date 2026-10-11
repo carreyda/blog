@@ -3,7 +3,7 @@ definePageMeta({ layout: 'admin-auth' })
 
 const form = reactive({ username: '', password: '' })
 const pending = ref(false)
-const errorMessage = ref('')
+const { notifySuccess, notifyError } = useAdminFeedback()
 const showPassword = ref(false)
 const session = useState<{ csrfToken: string; user: { id: number; username: string; role: 'ADMIN' } } | null>('admin-session', () => null)
 
@@ -12,14 +12,14 @@ if (session.value) await navigateTo('/admin')
 async function submit() {
   if (pending.value) return
   pending.value = true
-  errorMessage.value = ''
   try {
     const response = await $fetch('/api/auth/login', { method: 'POST', body: form })
     if (!('data' in response)) throw new Error(response.error.message)
     session.value = response.data
     await navigateTo('/admin')
-  } catch (error: any) {
-    errorMessage.value = error?.data?.error?.message || '登录失败，请检查账号与密码'
+    notifySuccess('登录成功')
+  } catch (error) {
+    notifyError(error, '登录失败，请检查账号与密码')
   } finally { pending.value = false }
 }
 </script>
@@ -40,7 +40,6 @@ async function submit() {
             <template #trailing><UButton type="button" color="neutral" variant="ghost" size="xs" :icon="showPassword ? 'i-lucide-eye-off' : 'i-lucide-eye'" :aria-label="showPassword ? '隐藏密码' : '显示密码'" @click="showPassword = !showPassword" /></template>
           </UInput>
         </UFormField>
-        <UAlert v-if="errorMessage" color="error" variant="soft" icon="i-lucide-circle-alert" :description="errorMessage" />
         <UButton type="submit" block size="xl" icon="i-lucide-log-in" :loading="pending">进入工作台</UButton>
       </form>
     </UCard>

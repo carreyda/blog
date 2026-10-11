@@ -18,6 +18,9 @@ type Bookmark = {
 }
 
 const session = useState<{ csrfToken: string } | null>('admin-session')
+const { notifySuccess, notifyError } = useAdminFeedback()
+const deletingCategoryId = ref<number | null>(null)
+const deletingBookmarkId = ref<number | null>(null)
 const { data: categoryResponse, refresh: refreshCategories } = await useFetch<{ data: RootCategory[] }>('/api/admin/bookmark-categories')
 const { data: bookmarkResponse, refresh: refreshBookmarks } = await useFetch<{ data: Bookmark[] }>('/api/admin/bookmarks')
 const categories = computed(() => categoryResponse.value?.data || [])
@@ -31,7 +34,6 @@ const blankCategory = () => ({ name: '', parentId: null as number | null, sort: 
 const categoryForm = reactive(blankCategory())
 const editingCategoryId = ref<number | null>(null)
 const categoryPending = ref(false)
-const categoryError = ref('')
 
 const blankBookmark = () => ({
   categoryId: childCategories.value[0]?.id || 0,
@@ -45,7 +47,6 @@ const blankBookmark = () => ({
 const bookmarkForm = reactive(blankBookmark())
 const editingBookmarkId = ref<number | null>(null)
 const bookmarkPending = ref(false)
-const bookmarkError = ref('')
 const search = ref('')
 const filterCategoryId = ref(0)
 const brokenIcons = ref(new Set<number>())
@@ -71,21 +72,19 @@ watch(childCategories, (items) => {
 function resetCategory() {
   editingCategoryId.value = null
   Object.assign(categoryForm, blankCategory())
-  categoryError.value = ''
 }
 
 function editCategory(category: RootCategory | ChildCategory) {
   editingCategoryId.value = category.id
   Object.assign(categoryForm, { name: category.name, parentId: category.parentId, sort: category.sort })
-  categoryError.value = ''
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 async function saveCategory() {
   if (!session.value || categoryPending.value) return
   categoryPending.value = true
-  categoryError.value = ''
   try {
+    const successMessage = editingCategoryId.value ? '分类已保存' : '分类已创建'
     await $fetch(editingCategoryId.value ? `/api/admin/bookmark-categories/${editingCategoryId.value}` : '/api/admin/bookmark-categories', {
       method: editingCategoryId.value ? 'PUT' : 'POST',
       body: { ...categoryForm, sort: Number(categoryForm.sort) },
@@ -93,16 +92,17 @@ async function saveCategory() {
     })
     resetCategory()
     await Promise.all([refreshCategories(), refreshBookmarks()])
-  } catch (error: any) {
-    categoryError.value = error?.data?.error?.message || '保存分类失败'
+    notifySuccess(successMessage)
+  } catch (error) {
+    notifyError(error, '保存分类失败')
   } finally {
     categoryPending.value = false
   }
 }
 
 async function removeCategory(category: RootCategory | ChildCategory) {
-  if (!session.value || !window.confirm(`确定删除分类“${category.name}”吗？`)) return
-  categoryError.value = ''
+  if (!session.value || deletingCategoryId.value !== null || !window.confirm(`确定删除分类“${category.name}”吗？`)) return
+  deletingCategoryId.value = category.id
   try {
     await $fetch(`/api/admin/bookmark-categories/${category.id}`, {
       method: 'DELETE',
@@ -110,15 +110,17 @@ async function removeCategory(category: RootCategory | ChildCategory) {
     })
     if (editingCategoryId.value === category.id) resetCategory()
     await refreshCategories()
-  } catch (error: any) {
-    categoryError.value = error?.data?.error?.message || '删除分类失败'
+    notifySuccess('分类已删除')
+  } catch (error) {
+    notifyError(error, '删除分类失败')
+  } finally {
+    deletingCategoryId.value = null
   }
 }
 
 function resetBookmark() {
   editingBookmarkId.value = null
   Object.assign(bookmarkForm, blankBookmark())
-  bookmarkError.value = ''
 }
 
 function editBookmark(bookmark: Bookmark) {
@@ -132,15 +134,14 @@ function editBookmark(bookmark: Bookmark) {
     sort: bookmark.sort,
     isVisible: bookmark.isVisible,
   })
-  bookmarkError.value = ''
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 async function saveBookmark() {
   if (!session.value || bookmarkPending.value) return
   bookmarkPending.value = true
-  bookmarkError.value = ''
   try {
+    const successMessage = editingBookmarkId.value ? '收藏已保存' : '收藏已添加'
     await $fetch(editingBookmarkId.value ? `/api/admin/bookmarks/${editingBookmarkId.value}` : '/api/admin/bookmarks', {
       method: editingBookmarkId.value ? 'PUT' : 'POST',
       body: {
@@ -152,16 +153,17 @@ async function saveBookmark() {
     })
     resetBookmark()
     await Promise.all([refreshBookmarks(), refreshCategories()])
-  } catch (error: any) {
-    bookmarkError.value = error?.data?.error?.message || '保存收藏失败'
+    notifySuccess(successMessage)
+  } catch (error) {
+    notifyError(error, '保存收藏失败')
   } finally {
     bookmarkPending.value = false
   }
 }
 
 async function removeBookmark(bookmark: Bookmark) {
-  if (!session.value || !window.confirm(`确定删除收藏“${bookmark.name}”吗？`)) return
-  bookmarkError.value = ''
+  if (!session.value || deletingBookmarkId.value !== null || !window.confirm(`确定删除收藏“${bookmark.name}”吗？`)) return
+  deletingBookmarkId.value = bookmark.id
   try {
     await $fetch(`/api/admin/bookmarks/${bookmark.id}`, {
       method: 'DELETE',
@@ -169,8 +171,11 @@ async function removeBookmark(bookmark: Bookmark) {
     })
     if (editingBookmarkId.value === bookmark.id) resetBookmark()
     await Promise.all([refreshBookmarks(), refreshCategories()])
-  } catch (error: any) {
-    bookmarkError.value = error?.data?.error?.message || '删除收藏失败'
+    notifySuccess('收藏已删除')
+  } catch (error) {
+    notifyError(error, '删除收藏失败')
+  } finally {
+    deletingBookmarkId.value = null
   }
 }
 
@@ -200,7 +205,6 @@ function markIconBroken(id: number) {
             </select>
           </UFormField>
           <UFormField label="排序"><UInput v-model.number="categoryForm.sort" type="number" min="-9999" max="9999" class="w-full" /></UFormField>
-          <UAlert v-if="categoryError" color="error" variant="soft" :description="categoryError" />
           <div class="form-actions"><UButton type="submit" icon="i-lucide-check" :loading="categoryPending">{{ editingCategoryId ? '保存分类' : '创建分类' }}</UButton><UButton v-if="editingCategoryId" type="button" color="neutral" variant="ghost" @click="resetCategory">取消</UButton></div>
         </form>
       </UCard>
@@ -225,7 +229,6 @@ function markIconBroken(id: number) {
           <UFormField label="描述" required class="span-two"><UTextarea v-model="bookmarkForm.description" :rows="3" class="w-full" placeholder="简要说明这个网站的用途" /></UFormField>
           <UFormField label="排序"><UInput v-model.number="bookmarkForm.sort" type="number" min="-9999" max="9999" class="w-full" /></UFormField>
           <label class="visibility-toggle"><input v-model="bookmarkForm.isVisible" type="checkbox"><span><strong>公开展示</strong><small>关闭后不会出现在前台收藏页</small></span></label>
-          <UAlert v-if="bookmarkError" class="span-two" color="error" variant="soft" :description="bookmarkError" />
           <div class="form-actions span-two"><UButton type="submit" icon="i-lucide-check" :loading="bookmarkPending" :disabled="!categoryOptions.length">{{ editingBookmarkId ? '保存收藏' : '添加收藏' }}</UButton><UButton v-if="editingBookmarkId" type="button" color="neutral" variant="ghost" @click="resetBookmark">取消</UButton></div>
         </form>
       </UCard>
@@ -240,13 +243,13 @@ function markIconBroken(id: number) {
             <div class="category-row parent-row">
               <span class="category-icon"><UIcon name="i-lucide-folder" /></span>
               <div><strong>{{ parent.name }}</strong><small>{{ parent.children.length }} 个子分类 · 排序 {{ parent.sort }}</small></div>
-              <div class="row-actions"><UButton icon="i-lucide-pencil" size="xs" color="neutral" variant="ghost" square :aria-label="`编辑 ${parent.name}`" @click="editCategory(parent)" /><UButton icon="i-lucide-trash-2" size="xs" color="error" variant="ghost" square :aria-label="`删除 ${parent.name}`" @click="removeCategory(parent)" /></div>
+              <div class="row-actions"><UButton icon="i-lucide-pencil" size="xs" color="neutral" variant="ghost" square :aria-label="`编辑 ${parent.name}`" @click="editCategory(parent)" /><UButton icon="i-lucide-trash-2" size="xs" color="error" variant="ghost" square :aria-label="`删除 ${parent.name}`" :loading="deletingCategoryId === parent.id" :disabled="deletingCategoryId !== null" @click="removeCategory(parent)" /></div>
             </div>
             <div v-for="child in parent.children" :key="child.id" class="category-row child-row">
               <span class="tree-line" />
               <span class="category-icon"><UIcon name="i-lucide-folder-open" /></span>
               <div><strong>{{ child.name }}</strong><small>{{ child._count.bookmarks }} 个收藏 · 排序 {{ child.sort }}</small></div>
-              <div class="row-actions"><UButton icon="i-lucide-pencil" size="xs" color="neutral" variant="ghost" square :aria-label="`编辑 ${child.name}`" @click="editCategory(child)" /><UButton icon="i-lucide-trash-2" size="xs" color="error" variant="ghost" square :aria-label="`删除 ${child.name}`" @click="removeCategory(child)" /></div>
+              <div class="row-actions"><UButton icon="i-lucide-pencil" size="xs" color="neutral" variant="ghost" square :aria-label="`编辑 ${child.name}`" @click="editCategory(child)" /><UButton icon="i-lucide-trash-2" size="xs" color="error" variant="ghost" square :aria-label="`删除 ${child.name}`" :loading="deletingCategoryId === child.id" :disabled="deletingCategoryId !== null" @click="removeCategory(child)" /></div>
             </div>
           </section>
         </div>
@@ -268,7 +271,7 @@ function markIconBroken(id: number) {
             </span>
             <div class="bookmark-info"><div><strong>{{ bookmark.name }}</strong><UBadge :color="bookmark.isVisible ? 'success' : 'neutral'" variant="subtle" size="sm">{{ bookmark.isVisible ? '公开' : '隐藏' }}</UBadge></div><p>{{ bookmark.description }}</p><small>{{ bookmark.category.parent?.name }} / {{ bookmark.category.name }} · 排序 {{ bookmark.sort }}</small></div>
             <a class="bookmark-url" :href="bookmark.url" target="_blank" rel="noopener noreferrer">{{ bookmark.url }}<UIcon name="i-lucide-external-link" /></a>
-            <div class="row-actions"><UButton icon="i-lucide-pencil" size="xs" color="neutral" variant="ghost" square :aria-label="`编辑 ${bookmark.name}`" @click="editBookmark(bookmark)" /><UButton icon="i-lucide-trash-2" size="xs" color="error" variant="ghost" square :aria-label="`删除 ${bookmark.name}`" @click="removeBookmark(bookmark)" /></div>
+            <div class="row-actions"><UButton icon="i-lucide-pencil" size="xs" color="neutral" variant="ghost" square :aria-label="`编辑 ${bookmark.name}`" @click="editBookmark(bookmark)" /><UButton icon="i-lucide-trash-2" size="xs" color="error" variant="ghost" square :aria-label="`删除 ${bookmark.name}`" :loading="deletingBookmarkId === bookmark.id" :disabled="deletingBookmarkId !== null" @click="removeBookmark(bookmark)" /></div>
           </article>
         </div>
       </UCard>

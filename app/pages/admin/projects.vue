@@ -15,7 +15,8 @@ const statusItems: { label: string; value: Project['status'] }[] = [
 const blank = () => ({ name: '', summary: '', status: 'ACTIVE' as Project['status'], websiteUrl: '', githubUrl: '', techStack: '', sort: 0 })
 const form = reactive(blank())
 const editingId = ref<number | null>(null)
-const errorMessage = ref('')
+const { notifySuccess, notifyError } = useAdminFeedback()
+const deletingId = ref<number | null>(null)
 const pending = ref(false)
 
 const statusLabel = (status: Project['status']) => ({ ACTIVE: '已上线', BUILDING: '开发中', SOLD: '已出售', ARCHIVED: '已归档' })[status]
@@ -30,29 +31,38 @@ function edit(project: Project) {
 function reset() {
   editingId.value = null
   Object.assign(form, blank())
-  errorMessage.value = ''
 }
 
 async function save() {
-  if (!session.value) return
+  if (!session.value || pending.value) return
   pending.value = true
-  errorMessage.value = ''
   try {
+    const successMessage = editingId.value ? '项目已保存' : '项目已添加'
     const body = { ...form, techStack: form.techStack.split(/[,，]/).map(value => value.trim()).filter(Boolean), sort: Number(form.sort) }
     await $fetch(editingId.value ? `/api/admin/projects/${editingId.value}` : '/api/admin/projects', { method: editingId.value ? 'PUT' : 'POST', body, headers: { 'X-CSRF-Token': session.value.csrfToken } })
     reset()
     await refresh()
-  } catch (error: any) {
-    errorMessage.value = error?.data?.error?.message || '保存失败'
+    notifySuccess(successMessage)
+  } catch (error) {
+    notifyError(error, '保存项目失败')
   } finally {
     pending.value = false
   }
 }
 
 async function remove(project: Project) {
-  if (!session.value || !window.confirm(`确定永久删除“${project.name}”吗？`)) return
-  await $fetch(`/api/admin/projects/${project.id}`, { method: 'DELETE', headers: { 'X-CSRF-Token': session.value.csrfToken } })
-  await refresh()
+  if (!session.value || deletingId.value !== null || !window.confirm(`确定永久删除“${project.name}”吗？`)) return
+  deletingId.value = project.id
+  try {
+    await $fetch(`/api/admin/projects/${project.id}`, { method: 'DELETE', headers: { 'X-CSRF-Token': session.value.csrfToken } })
+    if (editingId.value === project.id) reset()
+    await refresh()
+    notifySuccess('项目已删除')
+  } catch (error) {
+    notifyError(error, '删除项目失败')
+  } finally {
+    deletingId.value = null
+  }
 }
 </script>
 
@@ -75,7 +85,6 @@ async function remove(project: Project) {
           <UFormField label="技术栈" hint="使用逗号分隔"><UInput v-model="form.techStack" placeholder="Nuxt, TypeScript, PostgreSQL" class="w-full" /></UFormField>
           <UFormField label="网站 URL"><UInput v-model="form.websiteUrl" icon="i-lucide-globe" placeholder="https://" class="w-full" /></UFormField>
           <UFormField label="GitHub URL"><UInput v-model="form.githubUrl" icon="i-lucide-github" placeholder="https://github.com/" class="w-full" /></UFormField>
-          <UAlert v-if="errorMessage" color="error" variant="soft" :description="errorMessage" />
           <div class="form-actions"><UButton type="submit" :loading="pending" icon="i-lucide-check">{{ editingId ? '保存修改' : '添加项目' }}</UButton><UButton v-if="editingId" type="button" color="neutral" variant="ghost" @click="reset">取消</UButton></div>
         </form>
       </UCard>
@@ -88,7 +97,7 @@ async function remove(project: Project) {
             <div class="project-copy"><strong>{{ project.name }}</strong><p>{{ project.summary }}</p></div>
             <div class="tech-list"><span v-for="tech in project.techStack" :key="tech">{{ tech }}</span><span v-if="!project.techStack.length">暂未设置技术栈</span></div>
             <div class="project-meta"><span>排序 {{ project.sort }}</span><span class="project-links"><a v-if="project.websiteUrl" :href="project.websiteUrl" target="_blank" rel="noopener noreferrer" aria-label="访问项目"><UIcon name="i-lucide-external-link" /></a><a v-if="project.githubUrl" :href="project.githubUrl" target="_blank" rel="noopener noreferrer" aria-label="查看 GitHub"><UIcon name="i-lucide-github" /></a></span></div>
-            <template #footer><div class="project-actions"><UButton icon="i-lucide-pencil" size="xs" color="neutral" variant="ghost" @click="edit(project)">编辑</UButton><UButton icon="i-lucide-trash-2" size="xs" color="error" variant="ghost" @click="remove(project)">删除</UButton></div></template>
+            <template #footer><div class="project-actions"><UButton icon="i-lucide-pencil" size="xs" color="neutral" variant="ghost" @click="edit(project)">编辑</UButton><UButton icon="i-lucide-trash-2" size="xs" color="error" variant="ghost" :loading="deletingId === project.id" :disabled="deletingId !== null" @click="remove(project)">删除</UButton></div></template>
           </UCard>
         </div>
         <UCard v-else><div class="empty-state"><UIcon name="i-lucide-panels-top-left" /><strong>暂无项目</strong><p>在左侧添加第一个项目。</p></div></UCard>
