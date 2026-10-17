@@ -36,5 +36,97 @@ const chartPath = computed(() => ({
 </template>
 
 <style scoped>
-.stat-card{min-height:156px;border-color:var(--admin-border,var(--color-border));box-shadow:none}.stat-card-inner{display:flex;min-height:154px;flex-direction:column;justify-content:space-between;padding:27px 28px 25px}.stat-card-head{display:flex;align-items:center;justify-content:space-between;gap:16px;color:var(--color-text);font-size:14px;font-weight:600}.stat-card-head :deep(svg){width:19px;height:19px;color:var(--color-text-secondary);stroke-width:1.7}.stat-card-bottom{display:flex;align-items:flex-end;justify-content:space-between;gap:18px}.stat-card-bottom strong{font-size:40px;font-weight:650;letter-spacing:-.045em;line-height:1}.sparkline{width:142px;height:58px;color:var(--color-primary)}.sparkline[data-tone="success"]{color:#21ad63}.sparkline[data-tone="neutral"]{color:#7b8491}.sparkline svg{display:block;width:100%;height:100%;overflow:visible}.spark-line{fill:none;stroke:currentColor;stroke-linecap:round;stroke-width:2}.spark-fill{fill:currentColor;opacity:.07}@media(max-width:1240px){.sparkline{width:110px}}@media(max-width:760px){.stat-card-inner{padding:23px}.sparkline{width:145px}}
+.stat-card {
+  min-height: 156px;
+  border-color: var(--admin-border,var(--color-border));
+  box-shadow: none;
+}
+
+.stat-card-inner {
+  display: flex;
+  min-height: 154px;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 27px 28px 25px;
+}
+
+.stat-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.stat-card-head :deep(svg) {
+  width: 19px;
+  height: 19px;
+  color: var(--color-text-secondary);
+  stroke-width: 1.7;
+}
+
+.stat-card-bottom {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.stat-card-bottom strong {
+  font-size: 40px;
+  font-weight: 650;
+  letter-spacing: -.045em;
+  line-height: 1;
+}
+
+.sparkline {
+  width: 142px;
+  height: 58px;
+  color: var(--color-primary);
+}
+
+.sparkline[data-tone="success"] {
+  color: #21ad63;
+}
+
+.sparkline[data-tone="neutral"] {
+  color: #7b8491;
+}
+
+.sparkline svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.spark-line {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 2;
+}
+
+.spark-fill {
+  fill: currentColor;
+  opacity: .07;
+}
+
+@media (max-width: 1240px) {
+  .sparkline {
+    width: 110px;
+  }
+}
+
+@media (max-width: 760px) {
+  .stat-card-inner {
+    padding: 23px;
+  }
+
+  .sparkline {
+    width: 145px;
+  }
+}
 </style>

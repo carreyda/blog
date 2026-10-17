@@ -74,5 +74,217 @@ const formatRecentDate = (value?: string) => {
 </template>
 
 <style scoped>
-.dashboard-page{display:grid;gap:28px}.dashboard-header{margin:2px 0 3px}.dashboard-header :deep(h1){font-size:36px;font-weight:650;letter-spacing:-.045em}.dashboard-header :deep(.admin-description){margin-top:10px;font-size:15px}.stats-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}.dashboard-grid{display:grid;grid-template-columns:minmax(0,1.95fr) minmax(330px,.78fr);gap:20px;align-items:stretch}.dashboard-card{min-height:474px;border-color:var(--admin-border,var(--color-border));box-shadow:none}.card-heading{display:flex;align-items:center;justify-content:space-between;gap:16px}.card-heading strong{font-size:16px;font-weight:650}.table-wrap{width:100%;overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:13px}th{padding:0 7px 13px;color:var(--color-text-secondary);font-size:12px;font-weight:450;text-align:left}td{height:61px;padding:0 7px;border-top:1px solid var(--admin-border,var(--color-border));color:var(--color-text);white-space:nowrap}td:first-child{width:100%;font-weight:500;white-space:normal}td:first-child a:hover{color:var(--color-primary)}td:nth-child(2){min-width:100px}td:nth-child(3){min-width:105px}td:last-child{min-width:170px;color:var(--color-text-secondary)}.card-footer-link{display:block;color:var(--color-primary);font-size:13px;text-align:center}.recent-list{display:grid}.recent-item{display:grid;min-width:0;grid-template-columns:40px minmax(0,1fr) auto;align-items:center;gap:12px;min-height:73px;border-top:1px solid var(--admin-border,var(--color-border))}.recent-item:hover strong{color:var(--color-primary)}.recent-icon{display:grid;width:38px;height:38px;place-items:center;border:1px solid var(--admin-border,var(--color-border));border-radius:7px;color:var(--color-text-secondary)}.recent-icon :deep(svg){width:17px;height:17px}.recent-item strong{overflow:hidden;font-size:13px;font-weight:500;text-overflow:ellipsis;white-space:nowrap;transition:color .15s ease}.recent-item time{color:var(--color-text-secondary);font-size:11.5px;white-space:nowrap}.empty-state{display:grid;min-height:315px;place-items:center;align-content:center;gap:10px;color:var(--color-text-muted);text-align:center}.empty-state.compact{min-height:320px}.empty-state>svg{width:24px;height:24px}.empty-state p{margin:0;font-size:12px}@media(max-width:1180px){.dashboard-grid{grid-template-columns:1fr}.recent-card{min-height:auto}}@media(max-width:900px){.stats-grid{grid-template-columns:1fr}.dashboard-header :deep(h1){font-size:30px}}@media(max-width:640px){.dashboard-page{gap:20px}.dashboard-grid,.stats-grid{gap:14px}td:last-child{min-width:150px}}
+.dashboard-page {
+  display: grid;
+  gap: 28px;
+}
+
+.dashboard-header {
+  margin: 2px 0 3px;
+}
+
+.dashboard-header :deep(h1) {
+  font-size: 36px;
+  font-weight: 650;
+  letter-spacing: -.045em;
+}
+
+.dashboard-header :deep(.admin-description) {
+  margin-top: 10px;
+  font-size: 15px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 20px;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(0,1.95fr) minmax(330px,.78fr);
+  gap: 20px;
+  align-items: stretch;
+}
+
+.dashboard-card {
+  min-height: 474px;
+  border-color: var(--admin-border,var(--color-border));
+  box-shadow: none;
+}
+
+.card-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.card-heading strong {
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+th {
+  padding: 0 7px 13px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 450;
+  text-align: left;
+}
+
+td {
+  height: 61px;
+  padding: 0 7px;
+  border-top: 1px solid var(--admin-border,var(--color-border));
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+td:first-child {
+  width: 100%;
+  font-weight: 500;
+  white-space: normal;
+}
+
+td:first-child a:hover {
+  color: var(--color-primary);
+}
+
+td:nth-child(2) {
+  min-width: 100px;
+}
+
+td:nth-child(3) {
+  min-width: 105px;
+}
+
+td:last-child {
+  min-width: 170px;
+  color: var(--color-text-secondary);
+}
+
+.card-footer-link {
+  display: block;
+  color: var(--color-primary);
+  font-size: 13px;
+  text-align: center;
+}
+
+.recent-list {
+  display: grid;
+}
+
+.recent-item {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 40px minmax(0,1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 73px;
+  border-top: 1px solid var(--admin-border,var(--color-border));
+}
+
+.recent-item:hover strong {
+  color: var(--color-primary);
+}
+
+.recent-icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 1px solid var(--admin-border,var(--color-border));
+  border-radius: 7px;
+  color: var(--color-text-secondary);
+}
+
+.recent-icon :deep(svg) {
+  width: 17px;
+  height: 17px;
+}
+
+.recent-item strong {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color .15s ease;
+}
+
+.recent-item time {
+  color: var(--color-text-secondary);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.empty-state {
+  display: grid;
+  min-height: 315px;
+  place-items: center;
+  align-content: center;
+  gap: 10px;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.empty-state.compact {
+  min-height: 320px;
+}
+
+.empty-state>svg {
+  width: 24px;
+  height: 24px;
+}
+
+.empty-state p {
+  margin: 0;
+  font-size: 12px;
+}
+
+@media (max-width: 1180px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .recent-card {
+    min-height: auto;
+  }
+}
+
+@media (max-width: 900px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-header :deep(h1) {
+    font-size: 30px;
+  }
+}
+
+@media (max-width: 640px) {
+  .dashboard-page {
+    gap: 20px;
+  }
+
+  .dashboard-grid,.stats-grid {
+    gap: 14px;
+  }
+
+  td:last-child {
+    min-width: 150px;
+  }
+}
 </style>

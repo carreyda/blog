@@ -48,5 +48,72 @@ async function submit() {
 </template>
 
 <style scoped>
-.login-panel{display:grid;width:min(100%,430px);gap:24px}.login-heading{text-align:center}.login-icon{display:grid;width:42px;height:42px;margin:0 auto 22px;place-items:center;border:1px solid rgba(68,147,248,.22);border-radius:13px;color:#2878d4;background:rgba(68,147,248,.1);font-size:18px}.login-heading p{margin:0 0 7px;color:#2878d4;font-size:11px;font-weight:700;letter-spacing:.12em}.login-heading h2{margin:0;font-size:27px;letter-spacing:-.035em}.login-heading>span:last-child{display:block;margin-top:9px;color:var(--color-text-secondary);font-size:13px}.auth-card{box-shadow:0 18px 50px rgba(15,23,42,.08)}.auth-form{display:grid;gap:20px;padding:6px}.back-link{display:flex;align-items:center;justify-content:center;gap:7px;color:var(--color-text-secondary);font-size:12px;text-decoration:none;transition:color .15s ease}.back-link:hover{color:var(--color-primary)}
+.login-panel {
+  display: grid;
+  width: min(100%,430px);
+  gap: 24px;
+}
+
+.login-heading {
+  text-align: center;
+}
+
+.login-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  margin: 0 auto 22px;
+  place-items: center;
+  border: 1px solid rgba(68,147,248,.22);
+  border-radius: 13px;
+  color: #2878d4;
+  background: rgba(68,147,248,.1);
+  font-size: 18px;
+}
+
+.login-heading p {
+  margin: 0 0 7px;
+  color: #2878d4;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .12em;
+}
+
+.login-heading h2 {
+  margin: 0;
+  font-size: 27px;
+  letter-spacing: -.035em;
+}
+
+.login-heading>span:last-child {
+  display: block;
+  margin-top: 9px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.auth-card {
+  box-shadow: 0 18px 50px rgba(15,23,42,.08);
+}
+
+.auth-form {
+  display: grid;
+  gap: 20px;
+  padding: 6px;
+}
+
+.back-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  text-decoration: none;
+  transition: color .15s ease;
+}
+
+.back-link:hover {
+  color: var(--color-primary);
+}
 </style>

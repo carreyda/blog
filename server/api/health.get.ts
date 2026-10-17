@@ -1,1 +1,9 @@
-export default defineEventHandler(async event=>{try{await usePrisma().$queryRaw`SELECT 1`;return{status:'ok',database:'connected',timestamp:new Date().toISOString()}}catch{setResponseStatus(event,503);return{status:'error',database:'unavailable',timestamp:new Date().toISOString()}}})
+export default defineEventHandler(async (event) => {
+  try {
+    await usePrisma().$queryRaw`SELECT 1`
+    return { status: 'ok', database: 'connected', timestamp: new Date().toISOString() }
+  } catch {
+    setResponseStatus(event, 503)
+    return { status: 'error', database: 'unavailable', timestamp: new Date().toISOString() }
+  }
+})

@@ -110,5 +110,208 @@ async function save() {
 </template>
 
 <style scoped>
-.settings-page,.settings-form,.settings-main,.settings-aside,.fields{display:grid;gap:20px}.settings-form{grid-template-columns:minmax(0,1fr) 300px;align-items:start}.settings-main{gap:24px}.settings-aside{position:sticky;top:92px}.section-heading{display:flex;align-items:flex-start;gap:12px}.section-heading h2{margin:0;font-size:15px;font-weight:700}.section-heading p{margin:4px 0 0;color:var(--color-text-secondary);font-size:12px;line-height:1.55}.section-icon{display:grid;width:34px;height:34px;flex:0 0 auto;place-items:center;border-radius:10px;color:#2878d4;background:rgba(68,147,248,.12)}.section-icon--violet{color:#7c5bd6;background:rgba(139,92,246,.12)}.section-icon--green{color:#15866b;background:rgba(16,185,129,.12)}.section-icon--amber{color:#b87508;background:rgba(245,158,11,.14)}.fields--two{grid-template-columns:repeat(2,minmax(0,1fr))}.field-wide{grid-column:1/-1}.about-editor{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;line-height:1.7}.empty-section{display:flex;min-height:88px;align-items:center;justify-content:center;gap:8px;color:var(--color-text-secondary);font-size:13px}.brand-preview{display:flex;align-items:center;gap:12px;padding-bottom:18px;border-bottom:1px solid var(--color-border)}.brand-mark{display:grid;width:42px;height:42px;overflow:hidden;place-items:center;border-radius:12px;color:#4493f8;background:rgba(68,147,248,.12);font-weight:800}.brand-mark img,.avatar-preview img{width:100%;height:100%;object-fit:cover}.brand-preview strong,.profile-preview strong{display:block;font-size:13px}.brand-preview p,.profile-preview p{margin:4px 0 0;color:var(--color-text-secondary);font-size:11px;line-height:1.45}.profile-preview{display:flex;align-items:center;gap:10px;padding-top:18px}.avatar-preview{display:grid;width:34px;height:34px;overflow:hidden;place-items:center;border-radius:50%;color:#fff;background:linear-gradient(135deg,#4493f8,#7567d9);font-size:12px;font-weight:700}.save-bar{position:sticky;z-index:5;bottom:16px;grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 14px 12px 18px;border:1px solid var(--color-border);border-radius:14px;background:color-mix(in srgb,var(--color-background) 92%,transparent);box-shadow:0 12px 36px rgba(15,23,42,.1);backdrop-filter:blur(18px)}.save-message{display:flex;align-items:center;gap:8px;color:var(--color-text-secondary);font-size:12px}@media(max-width:1100px){.settings-form{grid-template-columns:1fr}.settings-aside{position:static;grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:680px){.fields--two,.settings-aside{grid-template-columns:1fr}.field-wide{grid-column:auto}.save-bar{bottom:8px}.save-message{display:none}.save-bar :deep(button){width:100%;justify-content:center}}
+.settings-page,.settings-form,.settings-main,.settings-aside,.fields {
+  display: grid;
+  gap: 20px;
+}
+
+.settings-form {
+  grid-template-columns: minmax(0,1fr) 300px;
+  align-items: start;
+}
+
+.settings-main {
+  gap: 24px;
+}
+
+.settings-aside {
+  position: sticky;
+  top: 92px;
+}
+
+.section-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.section-heading h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.section-heading p {
+  margin: 4px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.section-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 10px;
+  color: #2878d4;
+  background: rgba(68,147,248,.12);
+}
+
+.section-icon--violet {
+  color: #7c5bd6;
+  background: rgba(139,92,246,.12);
+}
+
+.section-icon--green {
+  color: #15866b;
+  background: rgba(16,185,129,.12);
+}
+
+.section-icon--amber {
+  color: #b87508;
+  background: rgba(245,158,11,.14);
+}
+
+.fields--two {
+  grid-template-columns: repeat(2,minmax(0,1fr));
+}
+
+.field-wide {
+  grid-column: 1/-1;
+}
+
+.about-editor {
+  font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.empty-section {
+  display: flex;
+  min-height: 88px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.brand-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.brand-mark {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  overflow: hidden;
+  place-items: center;
+  border-radius: 12px;
+  color: #4493f8;
+  background: rgba(68,147,248,.12);
+  font-weight: 800;
+}
+
+.brand-mark img,.avatar-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.brand-preview strong,.profile-preview strong {
+  display: block;
+  font-size: 13px;
+}
+
+.brand-preview p,.profile-preview p {
+  margin: 4px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.profile-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 18px;
+}
+
+.avatar-preview {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  overflow: hidden;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: linear-gradient(135deg,#4493f8,#7567d9);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.save-bar {
+  position: sticky;
+  z-index: 5;
+  bottom: 16px;
+  grid-column: 1/-1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 14px 12px 18px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: color-mix(in srgb,var(--color-background) 92%,transparent);
+  box-shadow: 0 12px 36px rgba(15,23,42,.1);
+  backdrop-filter: blur(18px);
+}
+
+.save-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+@media (max-width: 1100px) {
+  .settings-form {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-aside {
+    position: static;
+    grid-template-columns: repeat(2,minmax(0,1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .fields--two,.settings-aside {
+    grid-template-columns: 1fr;
+  }
+
+  .field-wide {
+    grid-column: auto;
+  }
+
+  .save-bar {
+    bottom: 8px;
+  }
+
+  .save-message {
+    display: none;
+  }
+
+  .save-bar :deep(button) {
+    width: 100%;
+    justify-content: center;
+  }
+}
 </style>
