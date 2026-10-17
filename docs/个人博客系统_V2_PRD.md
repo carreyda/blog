@@ -1,7 +1,7 @@
 # 个人博客系统 PRD
 
-> Version: V2.1（上线基线版）
-> Date: 2026-08-29
+> Version: V2.2（收藏模块与实现同步版）
+> Date: 2026-10-17
 > Status: V1 已上线，持续迭代
 > Production: https://carreyda.com
 
@@ -182,24 +182,24 @@ V1 不开发媒体库，不提供图片上传 / 存储 / 管理 / 腾讯云 COS 
 | `/blog/[id]` | 文章详情（以文章 id 作为路径标识，不使用 slug） |
 | `/tags/[slug]` | 标签文章 |
 | `/projects` | 项目 |
+| `/bookmarks` | 收藏 |
 | `/about` | 关于我 |
-| `/404` | 404 页面 |
+| 未匹配路由 | Nuxt 默认 404 页面（未单独实现自定义 404 路由） |
 
 ## D.2 首页
 
 **定位**：同时承担「个人主页 + 博客入口」，视觉风格：极简、大量留白、开发者风格、内容优先、轻量、克制。
 
-**页面结构**（自上而下）：Header → Intro → Latest Writing → Projects → Tech Stack → Find Me On → Get In Touch → Footer
+**页面结构**（自上而下）：Header → Intro → Latest Writing → Projects → Follow → Footer
 
 ### D.2.1 Header
 
-- 导航：首页 / 文章 / 项目 / 关于
-- 当前主题跟随操作系统深浅色偏好
-- 后续可增加：手动主题切换
+- 导航：首页 / 文章 / 项目 / 收藏 / 关于
+- 已支持跟随系统 / 亮色 / 暗黑三态切换，并持久化用户偏好
 
 ### D.2.2 Intro
 
-展示头像、姓名、一句话介绍、简介、联系按钮、当前状态。示例：
+展示头像、姓名、一句话介绍、简介、技术栈、社交链接与当前状态。示例：
 
 ```text
 你好，我是 XXX。
@@ -210,11 +210,11 @@ V1 不开发媒体库，不提供图片上传 / 存储 / 管理 / 腾讯云 COS 
 
 ### D.2.3 Latest Writing
 
-首页展示最近 3～5 篇文章，每篇展示标题、摘要、发布时间、阅读时长、标签，底部提供「查看全部文章 →」入口。
+首页展示最近 4 篇文章，每篇展示标题、摘要和发布时间，底部提供「查看全部文章 →」入口；阅读时长和标签在文章列表与详情页展示。
 
 ### D.2.4 Projects（首页精选）
 
-每个项目展示：项目名称、简介、状态、技术栈、项目地址、GitHub 地址。
+首页精选卡片展示项目名称和简介；项目页展示完整字段：名称、简介、状态、技术栈、项目地址和 GitHub 地址。
 
 项目仅作为外链卡片，不提供站内项目详情页。点击卡片时优先在新标签页打开 `websiteUrl`；未配置 `websiteUrl` 时打开 `githubUrl`。GitHub 地址同时可作为卡片上的独立按钮。外部链接需添加 `rel="noopener noreferrer"`。
 
@@ -230,7 +230,7 @@ V1 不开发媒体库，不提供图片上传 / 存储 / 管理 / 腾讯云 COS 
 
 ### D.2.7 Get In Touch（联系方式）
 
-支持 Email / GitHub / 个人社交链接，不需要开发站内私信系统。
+首页不单独设置站内联系表单；Email 与社交链接在关于页展示，不需要开发站内私信系统。
 
 ## D.3 文章列表
 
@@ -246,7 +246,7 @@ V1 不开发媒体库，不提供图片上传 / 存储 / 管理 / 腾讯云 COS 
 
 **阅读进度（P1，待实现）**：顶部显示细线阅读进度条，颜色 `#4493f8`。
 
-**代码块**：支持 Shiki 高亮、语言名称显示、Copy 按钮、横向滚动。
+**代码块**：支持 Shiki 高亮、语言名称显示、Copy 按钮、横向滚动；Mermaid 代码块由前端插件渲染。
 
 ## D.5 标签页
 
@@ -262,7 +262,7 @@ V1 不开发媒体库，不提供图片上传 / 存储 / 管理 / 腾讯云 COS 
 
 ## D.8 深色模式与 Design Token
 
-当前支持跟随操作系统的 `System` 深浅色模式，主题主色为 `#4493f8`。手动选择 `Light` / `Dark` / `System` 并持久化用户偏好列为 P1。
+已支持 `System` / `Light` / `Dark` 三态手动切换，用户偏好通过 Nuxt UI 的 `useColorMode` 持久化；主题主色保持 `#4493f8`。
 
 基础主题变量（具体 Token 后续在 UI Design 阶段进一步细化）：
 
@@ -295,10 +295,8 @@ V1 不开发媒体库，不提供图片上传 / 存储 / 管理 / 腾讯云 COS 
 
 | 一级 | 二级 |
 |---|---|
-| 仪表盘 | — |
-| 内容管理 | 文章管理 / 标签管理 |
-| 项目管理 | 项目列表 |
-| 数据分析 | 访问统计 |
+| 仪表盘 | 数据概览与访问统计 |
+| 内容管理 | 文章管理 / 标签管理 / 项目管理 / 收藏管理 |
 | 系统 | 网站设置 |
 
 明确**不**包含：媒体库。
@@ -336,7 +334,7 @@ V1 不开发媒体库，不提供图片上传 / 存储 / 管理 / 腾讯云 COS 
 
 ### E.4.2 编辑文章
 
-路径 `/admin/posts/[id]`，核心布局：
+路径 `/admin/posts/[id]/edit`，核心布局：
 
 ```text
 ┌────────────────────────────────────┐
@@ -386,6 +384,8 @@ V1 只做最基础的浏览量统计，不做访问趋势图、不做用户画�
 
 两个计数器都采用简单计数，不做去重（不区分独立访客 / 重复访问），接受刷新、机器人访问导致的重复计数，也不记录访问日志明细，避免引入 `visitorId` 生成方式、日志表规模控制等额外复杂度——统计目的是"大致看看"，不是精确分析。
 
+上述统计目前集中展示在 `/admin` 仪表盘（文章总数、已发布数、全站总访问量、浏览量 Top 5 和最近编辑），不单独提供访问统计页面。
+
 ## E.8 网站设置
 
 路径 `/admin/settings`
@@ -393,10 +393,22 @@ V1 只做最基础的浏览量统计，不做访问趋势图、不做用户画�
 | 分类 | 配置项 |
 |---|---|
 | 基础信息 | 网站名称、网站描述、头像 URL、Logo URL、个人名称、个人简介、当前状态、Email |
-| 首页内容 | 技术栈（可排序）、首页精选项目数量 |
+| 首页内容 | 技术栈（按输入顺序展示）、首页精选项目数量 |
 | 关于页 | Markdown 正文 |
-| 社交链接 | GitHub、Twitter/X、LinkedIn、掘金、知乎、小红书、自定义链接 |
+| 社交链接 | GitHub、Twitter/X、LinkedIn、掘金、知乎、小红书（固定平台） |
 | SEO | 默认 SEO Title、默认 SEO Description、默认 OG Image |
+
+## E.9 收藏管理
+
+路径 `/admin/bookmarks`，支持分类和收藏两级管理：
+
+- 分类最多两级：`parentId = null` 为一级分类，指向一级分类的为二级分类；不支持三级分类。
+- 收藏只能归属二级分类，不能直接挂在一级分类下。
+- 分类支持创建、重命名、调整父级和排序；同一父级下名称唯一。
+- 含有子分类的一级分类不能改为二级分类；含有收藏的二级分类不能改为一级分类，也不能删除。
+- 收藏字段：分类、名称、描述、图标 URL、网站 URL、排序和是否公开；网站 URL 全局唯一，图标 URL 可为空。
+- 删除分类前必须先清空其子分类和收藏，接口拒绝非空分类并返回 `409`，数据库外键使用 `Restrict` 兜底。
+- 前台 `/bookmarks` 只展示 `isVisible = true` 的收藏，按分类和排序值展示；图标 URL 为空或加载失败时显示占位图标。
 
 ---
 
@@ -407,11 +419,13 @@ V1 只做最基础的浏览量统计，不做访问趋势图、不做用户画�
 博客需支持基础 SEO：Title、Description、Canonical、Open Graph、Twitter Card、Sitemap、Robots。
 
 - **文章 SEO**：可独立设置 `seoTitle` / `seoDescription`；为空时分别回退为文章 `Title` / `Summary`
-- **Sitemap**：`/sitemap.xml`，包含首页、Blog、Articles、Projects、About、Tags
+- **Sitemap**：`/sitemap.xml`，包含首页、Blog、Articles、Projects、Bookmarks、About、Tags
+
+当前已实现 Title、Description、Open Graph 和 Sitemap；Canonical 与 Twitter Card 仍待补齐（见 Part K、Part M）。
 
 ## F.2 数据库设计
 
-V1 核心数据表：`User`、`Session`、`Post`、`Tag`、`PostTag`、`Project`、`SiteSetting`、`SiteStats`
+当前核心数据表：`User`、`Session`、`Post`、`Tag`、`PostTag`、`Project`、`SiteSetting`、`SiteStats`、`BookmarkCategory`、`Bookmark`
 
 ### F.2.1 枚举
 
@@ -435,50 +449,50 @@ ProjectStatus = ACTIVE | ARCHIVED | SOLD | BUILDING
 | **Project** | `id Int`、`name VarChar(100)`、`summary VarChar(500)`、`status ProjectStatus`、`websiteUrl VarChar(2048)?`、`githubUrl VarChar(2048)?`、`techStack String[]`、`sort Int`、时间字段 | `id` 自增主键；`status = ACTIVE`；`techStack = []`；`sort = 0`；`websiteUrl` 与 `githubUrl` 至少填写一个 |
 | **SiteSetting** | `id Int`、`value Json`、时间字段 | 单行表，固定 `id = 1`；更新时整体校验 JSON Schema；不得存储密码、密钥等敏感信息 |
 | **SiteStats** | `id Int`、`totalViews Int`、时间字段 | 单行表，固定 `id = 1`；`totalViews = 0`；使用数据库原子自增 |
+| **BookmarkCategory** | `id Int`、`name VarChar(50)`、`parentId Int?`、`sort Int`、时间字段 | `id` 自增主键；`parentId = null` 表示一级分类；父级删除策略 `Restrict`；`(parentId, name)` 组合唯一（一级分类的 `parentId` 为 `NULL`，重名仍需业务层检查）；索引 `(parentId, sort)`、`(sort, id)` |
+| **Bookmark** | `id Int`、`categoryId Int`、`name VarChar(100)`、`description VarChar(500)`、`iconUrl VarChar(2048)?`、`url VarChar(2048)`、`sort Int`、`isVisible Boolean`、时间字段 | `id` 自增主键；`categoryId` 关联 `BookmarkCategory`，删除策略 `Restrict`；`url` 唯一；`isVisible = true`；索引 `(categoryId, sort)`、`(isVisible, sort)` |
 
-索引要求：`Session(userId)`、`Session(expiresAt)`、`Post(status, publishedAt)`、`Post(updatedAt)`、`Post(viewCount)`、`Project(status, sort)`、`PostTag(tagId, postId)`。文章与标签列表默认只读取 `PUBLISHED` 文章；文章排序为 `publishedAt DESC, id DESC`，项目排序为 `sort ASC, id DESC`。
+索引要求：`Session(userId)`、`Session(expiresAt)`、`Post(status, publishedAt)`、`Post(updatedAt)`、`Post(viewCount)`、`Project(status, sort)`、`PostTag(tagId, postId)`、`BookmarkCategory(parentId, sort)`、`BookmarkCategory(sort, id)`、`Bookmark(categoryId, sort)`、`Bookmark(isVisible, sort)`。文章与标签列表默认只读取 `PUBLISHED` 文章；文章排序为 `publishedAt DESC, id DESC`，项目排序为 `sort ASC, id DESC`。
 
 ### F.2.3 删除与时间规则
 
 - 删除文章执行物理删除，并级联删除对应 `PostTag`；删除前由后台二次确认。
 - 删除标签执行物理删除，并级联删除对应 `PostTag`，不会删除文章。
 - 删除项目执行物理删除。
+- 删除收藏执行物理删除。
+- 删除收藏分类前必须先清空其子分类和收藏；接口返回 `409`，数据库外键 `Restrict` 作为最后一道保护。
 - `publishedAt` 在文章首次保存并发布时写入；普通编辑、归档、重新发布均不改变它。
 - 所有计数更新必须使用数据库原子自增，避免并发请求互相覆盖。
 
 ### F.2.4 SiteSetting JSON Schema
 
-`SiteSetting.value` 使用固定结构；未填写的可选 URL 使用 `null`，列表使用空数组，不增加任意顶级字段。
+`SiteSetting.value` 使用固定扁平结构；未填写的可选 URL 使用 `null`，列表使用空数组，不增加任意顶级字段。
 
 ```ts
 interface SiteSettingValue {
-  basic: {
-    siteName: string
-    siteDescription: string
-    avatarUrl: string | null
-    logoUrl: string | null
-    personName: string
-    bio: string
-    currentStatus: string | null
-    email: string | null
+  siteName: string
+  siteDescription: string
+  avatarUrl: string | null
+  logoUrl: string | null
+  personName: string
+  bio: string
+  currentStatus: string
+  email: string
+  techStack: string[]
+  featuredProjectCount: number // 默认 3；Schema 允许 0～20，后台输入框限制 0～12
+  aboutMarkdown: string
+  social: {
+    github: string | null
+    twitter: string | null
+    linkedin: string | null
+    juejin: string | null
+    zhihu: string | null
+    xiaohongshu: string | null
   }
-  home: {
-    techStack: Array<{ name: string; sort: number }>
-    featuredProjectCount: number // 默认 3，范围 1～6
-  }
-  about: {
-    contentMarkdown: string
-  }
-  socialLinks: Array<{
-    type: 'github' | 'twitter' | 'linkedin' | 'juejin' | 'zhihu' | 'xiaohongshu' | 'custom'
-    label: string
-    url: string
-    sort: number
-  }>
   seo: {
-    defaultTitle: string
-    defaultDescription: string
-    defaultOgImageUrl: string | null
+    title: string
+    description: string
+    ogImage: string | null
   }
 }
 ```
@@ -493,9 +507,9 @@ API 统一前缀 `/api`。后台管理接口前缀 `/api/admin`，需登录鉴�
 
 - 请求与响应均使用 JSON，时间字段使用 ISO 8601 UTC 字符串。
 - 单项成功响应：`{ "data": T }`。
-- 列表成功响应：`{ "data": T[], "meta": { "page": 1, "pageSize": 10, "total": 0, "totalPages": 0 } }`。
+- 列表成功响应：统一包裹在 `data` 中。分页列表使用 `{ "data": { "items": T[], "total": 0, "page": 1, "pageSize": 10 } }`；非分页列表使用 `{ "data": T[] }`。
 - 错误响应：`{ "error": { "code": "VALIDATION_ERROR", "message": "可读错误信息", "fields": {} } }`；`fields` 仅在字段校验失败时返回。
-- 分页参数：`page` 默认 `1`；`pageSize` 默认 `10`、最大 `50`；非正整数返回 `400`。
+- 分页参数：`page` 默认 `1`；`pageSize` 默认 `10`（后台文章列表默认 `20`）、最大 `50`；非法值回退到默认值。
 - 常用状态码：成功读取 `200`、创建 `201`、无响应体删除 `204`、参数错误 `400`、未登录 `401`、无权限 `403`、资源不存在 `404`、唯一约束冲突 `409`、限流 `429`、服务端错误 `500`。
 - 所有输入在服务端校验并去除未知字段；ID 必须为正整数；URL 仅允许 `http:` 或 `https:`。
 
@@ -511,6 +525,7 @@ API 统一前缀 `/api`。后台管理接口前缀 `/api/admin`，需登录鉴�
 | Tags | `GET /api/tags` | 标签列表（含每个标签下的文章数） |
 | | `GET /api/tags/:slug` | 指定标签下的文章列表 |
 | Projects | `GET /api/projects` | 项目列表 |
+| Bookmarks | `GET /api/bookmarks` | 公开收藏树（一级分类 → 二级分类 → 收藏），只返回 `isVisible = true` 的收藏并过滤空分类 |
 | Settings | `GET /api/settings` | 站点公开设置（基础信息、社交链接、默认 SEO），对应 Part E.8，仅返回前台需要展示的字段，不含敏感配置 |
 | Views | `POST /api/views` | 页面成功呈现后调用；请求体 `{ postId?: number }`，每次将 `SiteStats.totalViews + 1`，传入有效已发布文章时同时将对应 `Post.viewCount + 1`；不去重 |
 | SEO | `GET /sitemap.xml` | 对应 Part F.1 |
@@ -525,7 +540,9 @@ API 统一前缀 `/api`。后台管理接口前缀 `/api/admin`，需登录鉴�
 | 标签 | `GET/POST /api/admin/tags`　`PUT/DELETE /api/admin/tags/:id` |
 | Projects | `GET/POST /api/admin/projects`　`PUT/DELETE /api/admin/projects/:id` |
 | Settings | `GET/PUT /api/admin/settings`（读取或整体更新 `SiteSetting.value`） |
-| Analytics | `GET /api/admin/analytics/overview`（全站总访问量 + Top 5 文章，一个接口即可） |
+| Analytics | `GET /api/admin/analytics/overview`（文章总数、已发布数、全站总访问量、Top 5 文章和最近编辑，一个接口即可） |
+| 收藏分类 | `GET/POST /api/admin/bookmark-categories`　`PUT/DELETE /api/admin/bookmark-categories/:id` |
+| 收藏 | `GET/POST /api/admin/bookmarks`　`PUT/DELETE /api/admin/bookmarks/:id` |
 | Health Check | `GET /api/health`（无鉴权，返回 200 即代表服务存活，供部署脚本探测使用） |
 
 ### F.3.3 写接口 DTO 与行为
@@ -578,6 +595,38 @@ interface SaveProjectInput {
 ```
 
 `name`、`summary` 去除首尾空白后不得为空；技术栈去空、去重并保留输入顺序；两个地址至少填写一个。前台返回全部状态的项目，由状态决定展示徽标，不把 `ARCHIVED` 项目视为隐藏。
+
+#### 收藏分类
+
+`POST /api/admin/bookmark-categories` 与 `PUT /api/admin/bookmark-categories/:id` 请求体：
+
+```ts
+interface SaveBookmarkCategoryInput {
+  name: string
+  parentId: number | null
+  sort: number
+}
+```
+
+`parentId = null` 表示一级分类。服务端限制最多两级，分类不能以自身为父级，同级名称唯一；有子分类的分类不能转为二级分类，有收藏的二级分类不能转为一级分类。删除非空分类返回 `409`。
+
+#### 收藏
+
+`POST /api/admin/bookmarks` 与 `PUT /api/admin/bookmarks/:id` 请求体：
+
+```ts
+interface SaveBookmarkInput {
+  categoryId: number
+  name: string
+  description: string
+  iconUrl: string | null
+  url: string
+  sort: number
+  isVisible: boolean
+}
+```
+
+`categoryId` 必须指向二级分类；`url` 仅允许 HTTP/HTTPS 且全局唯一；`iconUrl` 为空字符串时保存为 `null`。
 
 #### 网站设置
 
@@ -632,9 +681,9 @@ interface SaveProjectInput {
 
 ### G.1.6 Markdown 与 XSS
 
-- V1 禁止 Markdown 原始 HTML，不支持 `script`、`iframe`、`style`、事件属性或任意嵌入代码。
+- Markdown 渲染允许原始 HTML 进入解析器，但输出前必须经过 sanitize-html 白名单清洗；`script`、`iframe`、`style`、事件属性和任意嵌入代码都会被移除。
 - Markdown 链接允许 `http:`、`https:`、`mailto:`；图片只允许 `http:`、`https:`；禁止 `javascript:`、`data:`、`vbscript:` 等危险协议。
-- markdown-it 禁用 HTML 选项；渲染后的 HTML 再经过服务端白名单清洗后才允许输出。
+- markdown-it 开启 `html: true` 以支持白名单内的 HTML 标签，渲染结果再经过服务端白名单清洗后才允许输出。
 - 前台正文与后台预览使用同一套 Markdown 配置和清洗规则；不得直接把未经清洗的字符串传入 `v-html`。
 - 外部链接添加 `rel="noopener noreferrer"`；在新标签页打开时必须同时设置该属性。
 
@@ -672,7 +721,7 @@ Nuxt 3000 端口不暴露公网。
 
 生产环境使用腾讯云签发的 TrustAsia DV TLS 证书，证书同时覆盖 `carreyda.com` 与 `www.carreyda.com`，安装在 Nginx。HTTP 和 `www` 统一 301 跳转到 `https://carreyda.com`。
 
-腾讯云控制台的自动续费不等同于 CVM 上证书文件自动替换。当前证书到期时间为 **2026-10-03**；续签后必须重新下载、核对并替换 Nginx 中的证书与私钥，再执行配置检查和 reload。后续可改为 Certbot 自动续签，或完善腾讯云证书自动部署。
+腾讯云控制台的自动续费不等同于 CVM 上证书文件自动替换。2026-10-17 核实，线上证书由 TrustAsia DV TLS RSA CA 2024 签发，有效期至 **2026-12-18 08:59:59 UTC**；续签后必须重新下载、核对并替换 Nginx 中的证书与私钥，再执行配置检查和 reload。后续可改为 Certbot 自动续签，或完善腾讯云证书自动部署。
 
 ## G.4 GitHub CI/CD
 
@@ -705,50 +754,35 @@ NUXT_PUBLIC_SITE_URL=
 blog/
 │
 ├── app/
-│   ├── assets/
-│   ├── components/
-│   │   ├── blog/
-│   │   └── admin/
-│   │
+│   ├── assets/css/
+│   ├── components/          # Markdown 编辑器、图片预览与后台通用组件
 │   ├── composables/
-│   │
-│   ├── layouts/
-│   │   ├── default.vue
-│   │   └── admin.vue
-│   │
-│   ├── middleware/
-│   │
-│   └── pages/
-│       ├── index.vue
-│       │
-│       ├── blog/
-│       │   ├── index.vue
-│       │   └── [id].vue
-│       │
-│       ├── tags/
-│       ├── projects/
-│       ├── about.vue
-│       │
-│       └── admin/
-│           ├── login.vue
-│           ├── index.vue
-│           │
-│           ├── posts/
-│           ├── tags/
-│           ├── projects/
-│           ├── analytics/
-│           └── settings/
+│   ├── layouts/             # default / admin / admin-auth
+│   ├── middleware/          # admin.global.ts
+│   ├── pages/
+│   │   ├── index.vue
+│   │   ├── blog/            # index.vue / [id].vue
+│   │   ├── tags/[slug].vue
+│   │   ├── projects/index.vue
+│   │   ├── bookmarks.vue
+│   │   ├── about.vue
+│   │   └── admin/           # index / login / posts / tags / projects / bookmarks / settings
+│   ├── plugins/
+│   └── types/
 │
 ├── server/
-│   ├── api/
-│   ├── middleware/
-│   ├── services/
-│   └── utils/
+│   ├── api/                 # 公开接口与 /api/admin 后台接口
+│   ├── middleware/          # 鉴权与安全响应头
+│   ├── routes/              # sitemap.xml / robots.txt
+│   └── utils/               # Prisma、认证、Markdown、设置等
 │
-├── prisma/
-│   └── schema.prisma
-│
+├── shared/schemas/          # 前后端共享 Zod Schema
+├── prisma/                  # schema.prisma 与 migrations
+├── scripts/                 # 管理员初始化、Vditor 资源复制等
 ├── public/
+├── deploy/
+├── docs/
+├── .github/workflows/
 │
 ├── nuxt.config.ts
 ├── package.json
@@ -771,7 +805,7 @@ blog/
 
 ## J.1 V1 明确不开发
 
-媒体库、图片上传、完整 CMS 用户系统、用户注册、多作者、RBAC、会员系统、站内私信、点赞、收藏、复杂评论系统、复杂运营系统、邮件营销、原生 App、`.md` 文件上传。
+媒体库、图片上传、完整 CMS 用户系统、用户注册、多作者、RBAC、会员系统、站内私信、点赞、复杂评论系统、复杂运营系统、邮件营销、原生 App、`.md` 文件上传。
 
 ## J.2 评论功能
 
@@ -797,27 +831,28 @@ V1 暂不作为核心需求。后续如需要，推荐考虑 **Giscus + GitHub D
 | **Phase 1**　基础架构 | Nuxt 4 / TypeScript / PostgreSQL / Prisma 初始化、项目目录、Environment、基础 UI | P0 | ✅ 已完成 | 生产构建通过，数据库迁移可部署 |
 | **Phase 2**　认证 | 后台登录、Session、路由保护、API 权限 | P0 | ✅ 已完成 | 可正常登录；未登录用户无法访问后台 |
 | **Phase 3**　文章核心 | 文章 CRUD、Vditor、Markdown Storage、手动保存并发布 | P0 | ✅ 已完成 | 可新建、编辑、归档、重新发布和物理删除；无草稿和自动保存 |
-| **Phase 4**　博客前台 | 公开 API、首页、Blog 列表、文章详情、Tags、Projects、About | P0 | ✅ 已完成 | Markdown 安全渲染、代码高亮、TOC、图片 URL、分页和移动端布局正常 |
+| **Phase 4**　博客前台 | 公开 API、首页、Blog 列表、文章详情、Tags、Projects、Bookmarks、About | P0 | ✅ 已完成 | Markdown 安全渲染、代码高亮、TOC、图片 URL、分页和移动端布局正常 |
 | **Phase 5**　后台管理 | Dashboard、标签管理、项目管理、网站设置 | P0 + P1 | ✅ 已完成 | 可管理文章、标签、项目和站点设置；Dashboard 可读取核心数据 |
+| **Phase 5.1**　收藏模块 | 两级分类、收藏 CRUD、后台管理页与前台 `/bookmarks` 页面 | P1 | ✅ 已完成 | 分类树、排序、URL 唯一性和图标降级均正常 |
 | **Phase 6**　统计 | `Post.viewCount`、`SiteStats.totalViews`、Dashboard 总访问量与 Top 5 | P1 | ✅ 已完成 | 原子自增生效，可查看全站总访问量与热门文章 |
 | **Phase 7**　SEO | Meta / Open Graph、Sitemap、Robots | P0 + P1 | 🟡 基础完成 | 页面 Meta、文章独立 SEO、sitemap.xml、robots.txt 已完成；Canonical/Twitter Card 仍需专项验收与补齐 |
 | **Phase 8**　部署 | Tencent Cloud、Nginx、HTTPS、PM2、GitHub Actions、Health Check | P0 | ✅ 已完成 | `https://carreyda.com` 正常；Push main 自动部署；数据库和公网健康检查通过 |
 
-**跨阶段 P1 增强项**：文章搜索和系统深浅色适配已完成；手动主题切换、上一篇 / 下一篇、相关文章、阅读进度待实现。
+**跨阶段 P1 增强项**：文章搜索、系统深浅色适配和手动三态主题切换已完成；上一篇 / 下一篇、相关文章、阅读进度待实现。
 
-**P2 未来扩展**（不纳入 V1 路线图，仅作为后续参考）：Category 分类体系、定时发布、文章版本历史、Mermaid、LaTeX、评论、AI 写作辅助、全文搜索、带趋势图的高级统计、复杂缓存、Webhook、API Token
+**P2 未来扩展**（不纳入 V1 路线图，仅作为后续参考）：Category 分类体系、定时发布、文章版本历史、LaTeX、评论、AI 写作辅助、全文搜索、带趋势图的高级统计、复杂缓存、Webhook、API Token
 
 ---
 
 # Part L　后续规划
 
-V1 完成后可以逐步增加：Category 分类体系、定时发布、文章版本历史、AI 内容摘要、AI 标题优化、AI SEO Description、AI 标签推荐、全文搜索、文章评论、阅读历史、文章推荐算法、Mermaid、LaTeX、带趋势图的高级统计、博客数据年度报告。
+V1 完成后可以逐步增加：Category 分类体系、定时发布、文章版本历史、AI 内容摘要、AI 标题优化、AI SEO Description、AI 标签推荐、全文搜索、文章评论、阅读历史、文章推荐算法、LaTeX、带趋势图的高级统计、博客数据年度报告。
 
 ---
 
 # Part M　当前实现状态与已知差异
 
-## M.1 生产状态（截至 2026-08-29）
+## M.1 生产状态（截至 2026-10-17）
 
 | 项目 | 当前状态 |
 |---|---|
@@ -827,10 +862,10 @@ V1 完成后可以逐步增加：Category 分类体系、定时发布、文章�
 | 数据库 | 服务器本地 PostgreSQL 16，应用使用独立低权限角色与 `blog_prod` 数据库 |
 | 应用进程 | PM2 Fork 单实例，由 `pm2-ubuntu` systemd 服务开机恢复 |
 | Web 入口 | Nginx 反向代理至 `127.0.0.1:3000` |
-| HTTPS | 腾讯云 TrustAsia DV TLS 证书，覆盖根域名与 `www` |
+| HTTPS | 腾讯云 TrustAsia DV TLS 证书，覆盖根域名与 `www`；2026-10-17 核实有效期至 2026-12-18 |
 | 自动部署 | Push `main` 触发 GitHub Actions；上传、迁移、构建、重载和健康检查自动完成 |
 | 健康检查 | `/api/health` 返回应用状态与数据库连接状态 |
-| 部署文档 | 根目录 `DEPLOYMENT.md` |
+| 部署文档 | `docs/DEPLOYMENT.md` |
 
 ## M.2 已确认且不得回退的产品决策
 
@@ -843,11 +878,15 @@ V1 完成后可以逐步增加：Category 分类体系、定时发布、文章�
 7. 浏览量采用简单计数，接受刷新、机器人和重复访问，不做访客去重。
 8. 主题主色保持 `#4493f8`。
 9. 不使用需要联网获取的第三方字体，优先使用系统字体栈。
+10. 收藏采用两级分类，收藏只能归属二级分类，网站 URL 全局唯一。
+11. Markdown 原始 HTML 不直接放行，必须经 sanitize-html 白名单清洗；脚本、iframe、style、事件属性和危险协议一律移除。
 
 ## M.3 已实现但与原始设想有所调整
 
-- 深浅色当前通过 `prefers-color-scheme` 自动跟随系统，并非完整的三态手动切换器。
+- 深浅色已支持 `System` / `Light` / `Dark` 三态手动切换，并通过 Nuxt UI `useColorMode` 持久化偏好。
 - 文章详情已实现服务端 Markdown 渲染、白名单清洗、Shiki 高亮、代码复制和 TOC；上一篇、下一篇、相关文章、阅读进度尚未实现。
+- Markdown 渲染保留原始 HTML 解析以支持白名单标签（如 `<details>`），最终仍由 sanitize-html 清洗。
+- 收藏模块已按两级分类 + 收藏实现，后台入口 `/admin/bookmarks`，前台入口 `/bookmarks`；数据模型和接口见 F.2、F.3。
 - 生产 HTTPS 使用腾讯云证书，而不是最初设想的 Let's Encrypt。
 - GitHub Actions 在服务器端完成依赖安装和构建，不上传本地 `.output`、`.env` 或 `node_modules`。
 - 项目生产域名已经确定为 `carreyda.com`，不再属于待定项。
@@ -856,11 +895,11 @@ V1 完成后可以逐步增加：Category 分类体系、定时发布、文章�
 
 | 顺序 | 工作项 | 原因 |
 |---|---|---|
-| 1 | 证书续期部署自动化与到期监控 | 当前证书 2026-10-03 到期，属于上线可靠性事项 |
+| 1 | 证书续期部署自动化与到期监控 | 当前证书 2026-12-18 到期，仍依赖手工替换，属于上线可靠性事项 |
 | 2 | Canonical、Twitter Card 与结构化数据专项检查 | 完成 SEO 闭环并避免重复域名收录 |
 | 3 | 数据库定时备份、异地保存与恢复演练 | 文章仅存于 PostgreSQL，备份属于核心数据安全能力 |
 | 4 | 上一篇 / 下一篇、相关文章 | 提升文章间导航和内容发现能力 |
-| 5 | 阅读进度与三态主题切换 | 改善长文阅读体验和个性化体验 |
+| 5 | 阅读进度 | 三态主题切换已完成，长文阅读进度仍待实现 |
 | 6 | 自动化测试与部署后冒烟测试扩充 | 降低后续持续迭代的回归风险 |
 
 ---
