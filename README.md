@@ -176,5 +176,6 @@ pm2 startOrReload ecosystem.config.cjs --update-env
 ## 文档
 
 - [产品需求文档](docs/个人博客系统_V2_PRD.md)
+- [优化待办清单](docs/优化待办清单.md)
 - [生产部署指南](docs/DEPLOYMENT.md)
 - [Nginx 配置示例](deploy/nginx-blog.conf.example)
