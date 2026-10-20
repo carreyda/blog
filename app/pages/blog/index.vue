@@ -356,7 +356,6 @@ function tagLink(slug?: string) {
 }
 
 .post-card p {
-  max-width: 68ch;
   margin: 0;
   color: var(--color-text-secondary);
   font-size: 13px;
