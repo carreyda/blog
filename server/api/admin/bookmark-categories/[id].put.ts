@@ -15,19 +15,24 @@ export default defineEventHandler(async (event) => {
 
   try {
     const category = await usePrisma().$transaction(async (tx) => {
-      const current = await tx.bookmarkCategory.findUnique({
-        where: { id },
-        include: { _count: { select: { children: true, bookmarks: true } } },
-      })
+      const current = await tx.bookmarkCategory.findUnique({ where: { id }, select: { id: true } })
       if (!current) throw createError({ statusCode: 404, statusMessage: 'BOOKMARK_CATEGORY_NOT_FOUND' })
 
       if (parsed.data.parentId !== null) {
-        const parent = await tx.bookmarkCategory.findUnique({ where: { id: parsed.data.parentId } })
-        if (!parent) throw createError({ statusCode: 404, statusMessage: 'BOOKMARK_CATEGORY_PARENT_NOT_FOUND' })
-        if (parent.parentId !== null) throw createError({ statusCode: 409, statusMessage: 'BOOKMARK_CATEGORY_DEPTH_EXCEEDED' })
-        if (current._count.children > 0) throw createError({ statusCode: 409, statusMessage: 'BOOKMARK_CATEGORY_HAS_CHILDREN' })
-      } else if (current._count.bookmarks > 0) {
-        throw createError({ statusCode: 409, statusMessage: 'BOOKMARK_CATEGORY_HAS_BOOKMARKS' })
+        const allCategories = await tx.bookmarkCategory.findMany({ select: { id: true, parentId: true } })
+        const parents = new Map(allCategories.map(item => [item.id, item.parentId]))
+        if (!parents.has(parsed.data.parentId)) {
+          throw createError({ statusCode: 404, statusMessage: 'BOOKMARK_CATEGORY_PARENT_NOT_FOUND' })
+        }
+
+        let cursor: number | null = parsed.data.parentId
+        const visited = new Set<number>()
+        while (cursor !== null) {
+          if (cursor === id) throw createError({ statusCode: 409, statusMessage: 'BOOKMARK_CATEGORY_INVALID_PARENT' })
+          if (visited.has(cursor)) throw createError({ statusCode: 409, statusMessage: 'BOOKMARK_CATEGORY_INVALID_PARENT' })
+          visited.add(cursor)
+          cursor = parents.get(cursor) ?? null
+        }
       }
 
       const duplicate = await tx.bookmarkCategory.findFirst({
@@ -47,14 +52,8 @@ export default defineEventHandler(async (event) => {
     if (isError(error) && error.statusMessage === 'BOOKMARK_CATEGORY_PARENT_NOT_FOUND') {
       return apiError(event, 404, 'BOOKMARK_CATEGORY_NOT_FOUND', '父分类不存在')
     }
-    if (isError(error) && error.statusMessage === 'BOOKMARK_CATEGORY_DEPTH_EXCEEDED') {
-      return apiError(event, 409, 'BOOKMARK_CATEGORY_DEPTH_EXCEEDED', '不能在二级分类下继续创建分类')
-    }
-    if (isError(error) && error.statusMessage === 'BOOKMARK_CATEGORY_HAS_CHILDREN') {
-      return apiError(event, 409, 'BOOKMARK_CATEGORY_INVALID_PARENT', '包含子分类的一级分类不能改为二级分类')
-    }
-    if (isError(error) && error.statusMessage === 'BOOKMARK_CATEGORY_HAS_BOOKMARKS') {
-      return apiError(event, 409, 'BOOKMARK_CATEGORY_INVALID_PARENT', '包含收藏的二级分类不能改为一级分类')
+    if (isError(error) && error.statusMessage === 'BOOKMARK_CATEGORY_INVALID_PARENT') {
+      return apiError(event, 409, 'BOOKMARK_CATEGORY_INVALID_PARENT', '不能把分类移动到它自己的子分类下')
     }
     if (
       (isError(error) && error.statusMessage === 'BOOKMARK_CATEGORY_CONFLICT')

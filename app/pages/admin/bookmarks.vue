@@ -3,8 +3,15 @@ definePageMeta({ layout: 'admin' })
 useSeoMeta({ title: '收藏管理' })
 
 type CategoryCount = { children: number; bookmarks: number }
-type ChildCategory = { id: number; name: string; parentId: number; sort: number; _count: CategoryCount }
-type RootCategory = { id: number; name: string; parentId: null; sort: number; _count: CategoryCount; children: ChildCategory[] }
+type Category = {
+  id: number
+  name: string
+  parentId: number | null
+  sort: number
+  _count: CategoryCount
+  children: Category[]
+}
+type FlatCategory = Category & { depth: number; path: string }
 type Bookmark = {
   id: number
   categoryId: number
@@ -14,29 +21,42 @@ type Bookmark = {
   url: string
   sort: number
   isVisible: boolean
-  category: { id: number; name: string; parent: { id: number; name: string } | null }
+  category: { id: number; name: string; parentId: number | null }
+  categoryPath: string
 }
 
 const session = useState<{ csrfToken: string } | null>('admin-session')
 const { notifySuccess, notifyError } = useAdminFeedback()
 const deletingCategoryId = ref<number | null>(null)
 const deletingBookmarkId = ref<number | null>(null)
-const { data: categoryResponse, refresh: refreshCategories } = await useFetch<{ data: RootCategory[] }>('/api/admin/bookmark-categories')
+const { data: categoryResponse, refresh: refreshCategories } = await useFetch<{ data: Category[] }>('/api/admin/bookmark-categories')
 const { data: bookmarkResponse, refresh: refreshBookmarks } = await useFetch<{ data: Bookmark[] }>('/api/admin/bookmarks')
 const categories = computed(() => categoryResponse.value?.data || [])
 const bookmarks = computed(() => bookmarkResponse.value?.data || [])
-const childCategories = computed(() => categories.value.flatMap(parent => parent.children.map(child => ({
-  ...child,
-  path: `${parent.name} / ${child.name}`,
-}))))
+const flatCategories = computed(() => flattenCategories(categories.value))
+
+function flattenCategories(nodes: Category[], depth = 0, parents: string[] = []): FlatCategory[] {
+  return nodes.flatMap((node) => {
+    const path = [...parents, node.name].join(' / ')
+    return [
+      { ...node, depth, path },
+      ...flattenCategories(node.children, depth + 1, [...parents, node.name]),
+    ]
+  })
+}
 
 const blankCategory = () => ({ name: '', parentId: null as number | null, sort: 0 })
 const categoryForm = reactive(blankCategory())
 const editingCategoryId = ref<number | null>(null)
 const categoryPending = ref(false)
 
+const categoryOptions = computed(() => flatCategories.value.map(category => ({
+  label: category.path,
+  value: category.id,
+})))
+
 const blankBookmark = () => ({
-  categoryId: childCategories.value[0]?.id || 0,
+  categoryId: categoryOptions.value[0]?.value || 0,
   name: '',
   description: '',
   iconUrl: '',
@@ -51,22 +71,52 @@ const search = ref('')
 const filterCategoryId = ref(0)
 const brokenIcons = ref(new Set<number>())
 
-const parentOptions = computed(() => categories.value
-  .filter(category => category.id !== editingCategoryId.value)
-  .map(category => ({ label: category.name, value: category.id })))
-const categoryOptions = computed(() => childCategories.value.map(category => ({ label: category.path, value: category.id })))
+const editingCategory = computed(() => flatCategories.value.find(category => category.id === editingCategoryId.value))
+const parentOptions = computed(() => {
+  const blocked = new Set<number>()
+  if (editingCategory.value) {
+    const walk = (category: Category) => {
+      blocked.add(category.id)
+      category.children.forEach(walk)
+    }
+    walk(editingCategory.value)
+  }
+
+  return flatCategories.value
+    .filter(category => !blocked.has(category.id))
+    .map(category => ({
+      label: `${'— '.repeat(category.depth)}${category.name}`,
+      value: category.id,
+    }))
+})
+const filterCategoryIds = computed(() => {
+  if (!filterCategoryId.value) return null
+
+  const category = flatCategories.value.find(item => item.id === filterCategoryId.value)
+  if (!category) return new Set([filterCategoryId.value])
+
+  const ids = new Set<number>()
+  const walk = (node: Category) => {
+    ids.add(node.id)
+    node.children.forEach(walk)
+  }
+  walk(category)
+  return ids
+})
 const filteredBookmarks = computed(() => {
   const keyword = search.value.trim().toLocaleLowerCase()
   return bookmarks.value.filter((bookmark) => {
-    if (filterCategoryId.value && bookmark.categoryId !== filterCategoryId.value) return false
+    if (filterCategoryIds.value && !filterCategoryIds.value.has(bookmark.categoryId)) return false
     if (!keyword) return true
-    return [bookmark.name, bookmark.description, bookmark.url, bookmark.category.name, bookmark.category.parent?.name]
+    return [bookmark.name, bookmark.description, bookmark.url, bookmark.categoryPath]
       .some(value => value?.toLocaleLowerCase().includes(keyword))
   })
 })
 
-watch(childCategories, (items) => {
-  if (!bookmarkForm.categoryId && items[0]) bookmarkForm.categoryId = items[0].id
+watch(categoryOptions, (items) => {
+  if (!items.some(item => item.value === bookmarkForm.categoryId)) {
+    bookmarkForm.categoryId = items[0]?.value || 0
+  }
 })
 
 function resetCategory() {
@@ -74,7 +124,7 @@ function resetCategory() {
   Object.assign(categoryForm, blankCategory())
 }
 
-function editCategory(category: RootCategory | ChildCategory) {
+function editCategory(category: FlatCategory) {
   editingCategoryId.value = category.id
   Object.assign(categoryForm, { name: category.name, parentId: category.parentId, sort: category.sort })
   window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -100,7 +150,7 @@ async function saveCategory() {
   }
 }
 
-async function removeCategory(category: RootCategory | ChildCategory) {
+async function removeCategory(category: FlatCategory) {
   if (!session.value || deletingCategoryId.value !== null || !window.confirm(`确定删除分类“${category.name}”吗？`)) return
   deletingCategoryId.value = category.id
   try {
@@ -186,19 +236,19 @@ function markIconBroken(id: number) {
 
 <template>
   <section class="bookmarks-admin-page">
-    <AdminPageHeader eyebrow="Resources" title="收藏管理" description="维护两级分类与公开展示的网站收藏。" />
+    <AdminPageHeader eyebrow="Resources" title="收藏管理" description="维护多级分类与公开展示的网站收藏。" />
 
     <div class="editor-grid">
       <UCard>
         <template #header>
           <div class="card-heading">
             <span><UIcon name="i-lucide-folders" /></span>
-            <div><strong>{{ editingCategoryId ? '编辑分类' : '新增分类' }}</strong><p>一级分类可继续包含二级分类</p></div>
+            <div><strong>{{ editingCategoryId ? '编辑分类' : '新增分类' }}</strong><p>分类支持任意层级嵌套</p></div>
           </div>
         </template>
         <form class="editor-form" @submit.prevent="saveCategory">
           <UFormField label="分类名称" required><UInput v-model="categoryForm.name" class="w-full" placeholder="例如：开发资源" /></UFormField>
-          <UFormField label="父分类" description="留空表示一级分类">
+          <UFormField label="父分类" description="留空表示一级分类，可选择任意已有分类">
             <select v-model="categoryForm.parentId" class="native-select">
               <option :value="null">无（一级分类）</option>
               <option v-for="item in parentOptions" :key="item.value" :value="item.value">{{ item.label }}</option>
@@ -213,13 +263,13 @@ function markIconBroken(id: number) {
         <template #header>
           <div class="card-heading">
             <span class="violet"><UIcon name="i-lucide-bookmark-plus" /></span>
-            <div><strong>{{ editingBookmarkId ? '编辑收藏' : '新增收藏' }}</strong><p>收藏只能添加到二级分类</p></div>
+            <div><strong>{{ editingBookmarkId ? '编辑收藏' : '新增收藏' }}</strong><p>收藏可以添加到任意层级分类</p></div>
           </div>
         </template>
         <form class="editor-form bookmark-form" @submit.prevent="saveBookmark">
           <UFormField label="所属分类" required>
             <select v-model.number="bookmarkForm.categoryId" class="native-select" :disabled="!categoryOptions.length">
-              <option v-if="!categoryOptions.length" :value="0">请先创建二级分类</option>
+              <option v-if="!categoryOptions.length" :value="0">请先创建分类</option>
               <option v-for="item in categoryOptions" :key="item.value" :value="item.value">{{ item.label }}</option>
             </select>
           </UFormField>
@@ -236,22 +286,20 @@ function markIconBroken(id: number) {
 
     <div class="content-grid">
       <UCard class="category-card">
-        <template #header><div class="list-heading"><div><strong>分类结构</strong><p>{{ categories.length }} 个一级分类，{{ childCategories.length }} 个二级分类</p></div><UBadge color="neutral" variant="subtle">{{ categories.length + childCategories.length }}</UBadge></div></template>
-        <div v-if="!categories.length" class="empty-state"><UIcon name="i-lucide-folder-plus" /><strong>暂无分类</strong><p>先创建一级分类，再添加二级分类。</p></div>
+        <template #header><div class="list-heading"><div><strong>分类结构</strong><p>{{ categories.length }} 个一级分类，{{ flatCategories.length }} 个分类</p></div><UBadge color="neutral" variant="subtle">{{ flatCategories.length }}</UBadge></div></template>
+        <div v-if="!categories.length" class="empty-state"><UIcon name="i-lucide-folder-plus" /><strong>暂无分类</strong><p>先创建一级分类，再继续添加子分类。</p></div>
         <div v-else class="category-tree">
-          <section v-for="parent in categories" :key="parent.id" class="category-group">
-            <div class="category-row parent-row">
-              <span class="category-icon"><UIcon name="i-lucide-folder" /></span>
-              <div><strong>{{ parent.name }}</strong><small>{{ parent.children.length }} 个子分类 · 排序 {{ parent.sort }}</small></div>
-              <div class="row-actions"><UButton icon="i-lucide-pencil" size="xs" color="neutral" variant="ghost" square :aria-label="`编辑 ${parent.name}`" @click="editCategory(parent)" /><UButton icon="i-lucide-trash-2" size="xs" color="error" variant="ghost" square :aria-label="`删除 ${parent.name}`" :loading="deletingCategoryId === parent.id" :disabled="deletingCategoryId !== null" @click="removeCategory(parent)" /></div>
-            </div>
-            <div v-for="child in parent.children" :key="child.id" class="category-row child-row">
-              <span class="tree-line" />
-              <span class="category-icon"><UIcon name="i-lucide-folder-open" /></span>
-              <div><strong>{{ child.name }}</strong><small>{{ child._count.bookmarks }} 个收藏 · 排序 {{ child.sort }}</small></div>
-              <div class="row-actions"><UButton icon="i-lucide-pencil" size="xs" color="neutral" variant="ghost" square :aria-label="`编辑 ${child.name}`" @click="editCategory(child)" /><UButton icon="i-lucide-trash-2" size="xs" color="error" variant="ghost" square :aria-label="`删除 ${child.name}`" :loading="deletingCategoryId === child.id" :disabled="deletingCategoryId !== null" @click="removeCategory(child)" /></div>
-            </div>
-          </section>
+          <div
+            v-for="category in flatCategories"
+            :key="category.id"
+            class="category-row"
+            :class="{ 'is-root': category.depth === 0 }"
+            :style="{ '--depth': category.depth }"
+          >
+            <span class="category-icon"><UIcon :name="category.depth === 0 ? 'i-lucide-folder' : 'i-lucide-folder-open'" /></span>
+            <div><strong>{{ category.name }}</strong><small>{{ category._count.children }} 个子分类 · {{ category._count.bookmarks }} 个收藏 · 排序 {{ category.sort }}</small></div>
+            <div class="row-actions"><UButton icon="i-lucide-pencil" size="xs" color="neutral" variant="ghost" square :aria-label="`编辑 ${category.name}`" @click="editCategory(category)" /><UButton icon="i-lucide-trash-2" size="xs" color="error" variant="ghost" square :aria-label="`删除 ${category.name}`" :loading="deletingCategoryId === category.id" :disabled="deletingCategoryId !== null" @click="removeCategory(category)" /></div>
+          </div>
         </div>
       </UCard>
 
@@ -269,7 +317,7 @@ function markIconBroken(id: number) {
               <img v-if="bookmark.iconUrl && !brokenIcons.has(bookmark.id)" :src="bookmark.iconUrl" alt="" @error="markIconBroken(bookmark.id)">
               <UIcon v-else name="i-lucide-globe-2" />
             </span>
-            <div class="bookmark-info"><div><strong>{{ bookmark.name }}</strong><UBadge :color="bookmark.isVisible ? 'success' : 'neutral'" variant="subtle" size="sm">{{ bookmark.isVisible ? '公开' : '隐藏' }}</UBadge></div><p>{{ bookmark.description }}</p><small>{{ bookmark.category.parent?.name }} / {{ bookmark.category.name }} · 排序 {{ bookmark.sort }}</small></div>
+            <div class="bookmark-info"><div><strong>{{ bookmark.name }}</strong><UBadge :color="bookmark.isVisible ? 'success' : 'neutral'" variant="subtle" size="sm">{{ bookmark.isVisible ? '公开' : '隐藏' }}</UBadge></div><p>{{ bookmark.description }}</p><small>{{ bookmark.categoryPath }} · 排序 {{ bookmark.sort }}</small></div>
             <a class="bookmark-url" :href="bookmark.url" target="_blank" rel="noopener noreferrer">{{ bookmark.url }}<UIcon name="i-lucide-external-link" /></a>
             <div class="row-actions"><UButton icon="i-lucide-pencil" size="xs" color="neutral" variant="ghost" square :aria-label="`编辑 ${bookmark.name}`" @click="editBookmark(bookmark)" /><UButton icon="i-lucide-trash-2" size="xs" color="error" variant="ghost" square :aria-label="`删除 ${bookmark.name}`" :loading="deletingBookmarkId === bookmark.id" :disabled="deletingBookmarkId !== null" @click="removeBookmark(bookmark)" /></div>
           </article>
@@ -416,20 +464,21 @@ function markIconBroken(id: number) {
   display: grid;
 }
 
-.category-group+.category-group {
-  margin-top: 7px;
-  padding-top: 7px;
-  border-top: 1px solid var(--color-border);
-}
-
 .category-row {
   display: grid;
   grid-template-columns: 34px minmax(0,1fr) auto;
   align-items: center;
   gap: 10px;
   min-height: 54px;
-  padding: 8px;
+  padding: 8px 8px 8px calc(8px + var(--depth) * 22px);
   border-radius: 8px;
+}
+
+.category-row.is-root:not(:first-child) {
+  margin-top: 6px;
+  border-top: 1px solid var(--color-border);
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
 }
 
 .category-row:hover,.bookmark-row:hover {
@@ -441,8 +490,8 @@ function markIconBroken(id: number) {
   gap: 3px;
 }
 
-.category-row strong {
-  font-size: 11.5px;
+.category-row.is-root strong {
+  font-size: 12.5px;
 }
 
 .category-row small {
@@ -458,22 +507,6 @@ function markIconBroken(id: number) {
   border-radius: 8px;
   color: var(--color-primary);
   background: color-mix(in srgb,var(--color-primary) 10%,transparent);
-}
-
-.child-row {
-  position: relative;
-  margin-left: 24px;
-  grid-template-columns: 34px minmax(0,1fr) auto;
-}
-
-.tree-line {
-  position: absolute;
-  left: -9px;
-  width: 18px;
-  height: 27px;
-  border-bottom: 1px solid var(--color-border);
-  border-left: 1px solid var(--color-border);
-  border-bottom-left-radius: 7px;
 }
 
 .row-actions {

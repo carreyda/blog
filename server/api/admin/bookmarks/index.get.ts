@@ -29,14 +29,48 @@ export default defineEventHandler(async (event) => {
     ]
   }
 
-  const bookmarks = await usePrisma().bookmark.findMany({
-    where,
-    orderBy: [{ sort: 'asc' }, { id: 'desc' }],
-    include: {
-      category: {
-        select: { id: true, name: true, parent: { select: { id: true, name: true } } },
+  const prisma = usePrisma()
+  const [categories, bookmarks] = await Promise.all([
+    prisma.bookmarkCategory.findMany({ select: { id: true, name: true, parentId: true } }),
+    prisma.bookmark.findMany({
+      where,
+      orderBy: [{ sort: 'asc' }, { id: 'desc' }],
+      include: {
+        category: { select: { id: true, name: true, parentId: true } },
       },
-    },
-  })
-  return { data: bookmarks }
+    }),
+  ])
+
+  const categoryById = new Map(categories.map(category => [category.id, category]))
+  const pathCache = new Map<number, string>()
+  function categoryPath(categoryId: number): string {
+    const cached = pathCache.get(categoryId)
+    if (cached) return cached
+
+    const names: string[] = []
+    const visited = new Set<number>()
+    let cursor: number | null = categoryId
+    while (cursor !== null) {
+      if (visited.has(cursor)) {
+        names.unshift('未分类')
+        break
+      }
+      visited.add(cursor)
+      const category = categoryById.get(cursor)
+      if (!category) {
+        names.unshift('未分类')
+        break
+      }
+      names.unshift(category.name)
+      cursor = category.parentId
+    }
+
+    const path = names.join(' / ')
+    pathCache.set(categoryId, path)
+    return path
+  }
+
+  return {
+    data: bookmarks.map(bookmark => ({ ...bookmark, categoryPath: categoryPath(bookmark.categoryId) })),
+  }
 })

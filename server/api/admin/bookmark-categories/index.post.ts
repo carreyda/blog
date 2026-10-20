@@ -12,7 +12,6 @@ export default defineEventHandler(async (event) => {
       if (parsed.data.parentId !== null) {
         const parent = await tx.bookmarkCategory.findUnique({ where: { id: parsed.data.parentId } })
         if (!parent) throw createError({ statusCode: 404, statusMessage: 'BOOKMARK_CATEGORY_NOT_FOUND' })
-        if (parent.parentId !== null) throw createError({ statusCode: 409, statusMessage: 'BOOKMARK_CATEGORY_DEPTH_EXCEEDED' })
       }
 
       const duplicate = await tx.bookmarkCategory.findFirst({
@@ -29,9 +28,6 @@ export default defineEventHandler(async (event) => {
   } catch (error) {
     if (isError(error) && error.statusMessage === 'BOOKMARK_CATEGORY_NOT_FOUND') {
       return apiError(event, 404, 'BOOKMARK_CATEGORY_NOT_FOUND', '父分类不存在')
-    }
-    if (isError(error) && error.statusMessage === 'BOOKMARK_CATEGORY_DEPTH_EXCEEDED') {
-      return apiError(event, 409, 'BOOKMARK_CATEGORY_DEPTH_EXCEEDED', '分类最多只能创建两级')
     }
     if (
       (isError(error) && error.statusMessage === 'BOOKMARK_CATEGORY_CONFLICT')
