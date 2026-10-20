@@ -1,7 +1,7 @@
 # 个人博客系统 PRD
 
-> Version: V2.2（收藏模块与实现同步版）
-> Date: 2026-10-17
+> Version: V2.3（多级收藏分类版）
+> Date: 2026-10-20
 > Status: V1 已上线，持续迭代
 > Production: https://carreyda.com
 
@@ -400,15 +400,15 @@ V1 只做最基础的浏览量统计，不做访问趋势图、不做用户画�
 
 ## E.9 收藏管理
 
-路径 `/admin/bookmarks`，支持分类和收藏两级管理：
+路径 `/admin/bookmarks`，支持多级分类和收藏管理：
 
-- 分类最多两级：`parentId = null` 为一级分类，指向一级分类的为二级分类；不支持三级分类。
-- 收藏只能归属二级分类，不能直接挂在一级分类下。
+- 分类通过 `parentId` 自关联，支持任意层级；`parentId = null` 为一级分类。
+- 收藏可以归属任意层级的分类，不再限制为二级分类。
 - 分类支持创建、重命名、调整父级和排序；同一父级下名称唯一。
-- 含有子分类的一级分类不能改为二级分类；含有收藏的二级分类不能改为一级分类，也不能删除。
 - 收藏字段：分类、名称、描述、图标 URL、网站 URL、排序和是否公开；网站 URL 全局唯一，图标 URL 可为空。
+- 调整父级时不能把分类移动到自身或自己的子孙分类下，防止形成循环；移动分类会连同其子分类一起移动。
 - 删除分类前必须先清空其子分类和收藏，接口拒绝非空分类并返回 `409`，数据库外键使用 `Restrict` 兜底。
-- 前台 `/bookmarks` 只展示 `isVisible = true` 的收藏，按分类和排序值展示；图标 URL 为空或加载失败时显示占位图标。
+- 前台 `/bookmarks` 按分类树展示，只展示 `isVisible = true` 的收藏，并过滤没有可见收藏的空分类；图标 URL 为空或加载失败时显示占位图标。
 
 ---
 
@@ -449,7 +449,7 @@ ProjectStatus = ACTIVE | ARCHIVED | SOLD | BUILDING
 | **Project** | `id Int`、`name VarChar(100)`、`summary VarChar(500)`、`status ProjectStatus`、`websiteUrl VarChar(2048)?`、`githubUrl VarChar(2048)?`、`techStack String[]`、`sort Int`、时间字段 | `id` 自增主键；`status = ACTIVE`；`techStack = []`；`sort = 0`；`websiteUrl` 与 `githubUrl` 至少填写一个 |
 | **SiteSetting** | `id Int`、`value Json`、时间字段 | 单行表，固定 `id = 1`；更新时整体校验 JSON Schema；不得存储密码、密钥等敏感信息 |
 | **SiteStats** | `id Int`、`totalViews Int`、时间字段 | 单行表，固定 `id = 1`；`totalViews = 0`；使用数据库原子自增 |
-| **BookmarkCategory** | `id Int`、`name VarChar(50)`、`parentId Int?`、`sort Int`、时间字段 | `id` 自增主键；`parentId = null` 表示一级分类；父级删除策略 `Restrict`；`(parentId, name)` 组合唯一（一级分类的 `parentId` 为 `NULL`，重名仍需业务层检查）；索引 `(parentId, sort)`、`(sort, id)` |
+| **BookmarkCategory** | `id Int`、`name VarChar(50)`、`parentId Int?`、`sort Int`、时间字段 | `id` 自增主键；`parentId = null` 表示一级分类，支持任意层级；父级删除策略 `Restrict`；`(parentId, name)` 组合唯一（一级分类的 `parentId` 为 `NULL`，重名仍需业务层检查）；索引 `(parentId, sort)`、`(sort, id)` |
 | **Bookmark** | `id Int`、`categoryId Int`、`name VarChar(100)`、`description VarChar(500)`、`iconUrl VarChar(2048)?`、`url VarChar(2048)`、`sort Int`、`isVisible Boolean`、时间字段 | `id` 自增主键；`categoryId` 关联 `BookmarkCategory`，删除策略 `Restrict`；`url` 唯一；`isVisible = true`；索引 `(categoryId, sort)`、`(isVisible, sort)` |
 
 索引要求：`Session(userId)`、`Session(expiresAt)`、`Post(status, publishedAt)`、`Post(updatedAt)`、`Post(viewCount)`、`Project(status, sort)`、`PostTag(tagId, postId)`、`BookmarkCategory(parentId, sort)`、`BookmarkCategory(sort, id)`、`Bookmark(categoryId, sort)`、`Bookmark(isVisible, sort)`。文章与标签列表默认只读取 `PUBLISHED` 文章；文章排序为 `publishedAt DESC, id DESC`，项目排序为 `sort ASC, id DESC`。
@@ -525,7 +525,7 @@ API 统一前缀 `/api`。后台管理接口前缀 `/api/admin`，需登录鉴�
 | Tags | `GET /api/tags` | 标签列表（含每个标签下的文章数） |
 | | `GET /api/tags/:slug` | 指定标签下的文章列表 |
 | Projects | `GET /api/projects` | 项目列表 |
-| Bookmarks | `GET /api/bookmarks` | 公开收藏树（一级分类 → 二级分类 → 收藏），只返回 `isVisible = true` 的收藏并过滤空分类 |
+| Bookmarks | `GET /api/bookmarks` | 公开收藏树（多级分类 → 收藏），只返回 `isVisible = true` 的收藏并过滤空分类 |
 | Settings | `GET /api/settings` | 站点公开设置（基础信息、社交链接、默认 SEO），对应 Part E.8，仅返回前台需要展示的字段，不含敏感配置 |
 | Views | `POST /api/views` | 页面成功呈现后调用；请求体 `{ postId?: number }`，每次将 `SiteStats.totalViews + 1`，传入有效已发布文章时同时将对应 `Post.viewCount + 1`；不去重 |
 | SEO | `GET /sitemap.xml` | 对应 Part F.1 |
@@ -608,7 +608,7 @@ interface SaveBookmarkCategoryInput {
 }
 ```
 
-`parentId = null` 表示一级分类。服务端限制最多两级，分类不能以自身为父级，同级名称唯一；有子分类的分类不能转为二级分类，有收藏的二级分类不能转为一级分类。删除非空分类返回 `409`。
+`parentId = null` 表示一级分类；分类支持任意层级，分类不能以自身为父级，也不能移动到自己的子孙分类下，同级名称唯一。删除非空分类返回 `409`。
 
 #### 收藏
 
@@ -626,7 +626,7 @@ interface SaveBookmarkInput {
 }
 ```
 
-`categoryId` 必须指向二级分类；`url` 仅允许 HTTP/HTTPS 且全局唯一；`iconUrl` 为空字符串时保存为 `null`。
+`categoryId` 必须指向一个存在的分类（支持任意层级）；`url` 仅允许 HTTP/HTTPS 且全局唯一；`iconUrl` 为空字符串时保存为 `null`。
 
 #### 网站设置
 
@@ -833,7 +833,7 @@ V1 暂不作为核心需求。后续如需要，推荐考虑 **Giscus + GitHub D
 | **Phase 3**　文章核心 | 文章 CRUD、Vditor、Markdown Storage、手动保存并发布 | P0 | ✅ 已完成 | 可新建、编辑、归档、重新发布和物理删除；无草稿和自动保存 |
 | **Phase 4**　博客前台 | 公开 API、首页、Blog 列表、文章详情、Tags、Projects、Bookmarks、About | P0 | ✅ 已完成 | Markdown 安全渲染、代码高亮、TOC、图片 URL、分页和移动端布局正常 |
 | **Phase 5**　后台管理 | Dashboard、标签管理、项目管理、网站设置 | P0 + P1 | ✅ 已完成 | 可管理文章、标签、项目和站点设置；Dashboard 可读取核心数据 |
-| **Phase 5.1**　收藏模块 | 两级分类、收藏 CRUD、后台管理页与前台 `/bookmarks` 页面 | P1 | ✅ 已完成 | 分类树、排序、URL 唯一性和图标降级均正常 |
+| **Phase 5.1**　收藏模块 | 多级分类、收藏 CRUD、后台管理页与前台 `/bookmarks` 页面 | P1 | ✅ 已完成 | 分类树、排序、URL 唯一性和图标降级均正常 |
 | **Phase 6**　统计 | `Post.viewCount`、`SiteStats.totalViews`、Dashboard 总访问量与 Top 5 | P1 | ✅ 已完成 | 原子自增生效，可查看全站总访问量与热门文章 |
 | **Phase 7**　SEO | Meta / Open Graph、Sitemap、Robots | P0 + P1 | 🟡 基础完成 | 页面 Meta、文章独立 SEO、sitemap.xml、robots.txt 已完成；Canonical/Twitter Card 仍需专项验收与补齐 |
 | **Phase 8**　部署 | Tencent Cloud、Nginx、HTTPS、PM2、GitHub Actions、Health Check | P0 | ✅ 已完成 | `https://carreyda.com` 正常；Push main 自动部署；数据库和公网健康检查通过 |
@@ -878,7 +878,7 @@ V1 完成后可以逐步增加：Category 分类体系、定时发布、文章�
 7. 浏览量采用简单计数，接受刷新、机器人和重复访问，不做访客去重。
 8. 主题主色保持 `#4493f8`。
 9. 不使用需要联网获取的第三方字体，优先使用系统字体栈。
-10. 收藏采用两级分类，收藏只能归属二级分类，网站 URL 全局唯一。
+10. 收藏分类支持任意层级嵌套，收藏可归属任意分类；同一父级下名称唯一，网站 URL 全局唯一。
 11. Markdown 原始 HTML 不直接放行，必须经 sanitize-html 白名单清洗；脚本、iframe、style、事件属性和危险协议一律移除。
 
 ## M.3 已实现但与原始设想有所调整
@@ -886,7 +886,7 @@ V1 完成后可以逐步增加：Category 分类体系、定时发布、文章�
 - 深浅色已支持 `System` / `Light` / `Dark` 三态手动切换，并通过 Nuxt UI `useColorMode` 持久化偏好。
 - 文章详情已实现服务端 Markdown 渲染、白名单清洗、Shiki 高亮、代码复制和 TOC；上一篇、下一篇、相关文章、阅读进度尚未实现。
 - Markdown 渲染保留原始 HTML 解析以支持白名单标签（如 `<details>`），最终仍由 sanitize-html 清洗。
-- 收藏模块已按两级分类 + 收藏实现，后台入口 `/admin/bookmarks`，前台入口 `/bookmarks`；数据模型和接口见 F.2、F.3。
+- 收藏模块已按多级分类 + 收藏实现，后台入口 `/admin/bookmarks`，前台入口 `/bookmarks`；数据模型和接口见 F.2、F.3。
 - 生产 HTTPS 使用腾讯云证书，而不是最初设想的 Let's Encrypt。
 - GitHub Actions 在服务器端完成依赖安装和构建，不上传本地 `.output`、`.env` 或 `node_modules`。
 - 项目生产域名已经确定为 `carreyda.com`，不再属于待定项。
