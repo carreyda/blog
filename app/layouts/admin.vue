@@ -157,7 +157,7 @@ async function logout() {
           <UIcon class="admin-crumb-arrow" name="i-lucide-chevron-right" />
           <strong>{{ currentPage }}</strong>
         </div>
-        <UButton to="/admin/posts/new" icon="i-lucide-pen-line" size="lg">新建文章</UButton>
+        <UButton v-if="route.path !== '/admin/posts/new'" to="/admin/posts/new" icon="i-lucide-pen-line" size="lg">新建文章</UButton>
       </header>
       <main class="admin-main">
         <div class="admin-content"><slot /></div>
@@ -226,6 +226,7 @@ async function logout() {
 }
 
 .admin-brand-mark {
+  color: var(--admin-active-text);
   font-family: ui-monospace, monospace;
   font-size: 17px;
   font-weight: 900;
@@ -260,17 +261,19 @@ async function logout() {
 .admin-nav-group p {
   margin: 0 10px 10px;
   color: var(--admin-muted);
-  font-size: 13px;
-  font-weight: 450;
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: .06em;
 }
 
 .admin-nav-group a {
+  position: relative;
   display: flex;
-  min-height: 56px;
+  min-height: 54px;
   align-items: center;
   gap: 14px;
   padding: 0 14px;
-  border-radius: 8px;
+  border-radius: 9px;
   color: var(--admin-body);
   font-size: 14px;
   font-weight: 480;
@@ -289,6 +292,17 @@ async function logout() {
   color: var(--admin-active-text);
   background: var(--admin-active-bg);
   font-weight: 570;
+}
+
+.admin-nav-group a.active::before {
+  position: absolute;
+  top: 14px;
+  bottom: 14px;
+  left: 0;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--admin-active-text);
+  content: "";
 }
 
 .admin-sidebar-footer {
@@ -406,7 +420,7 @@ async function logout() {
   color: var(--admin-muted);
   font-size: 13px;
 }
-.admin-topbar-left > strong { color: var(--admin-muted); font-weight: 480; }
+.admin-topbar-left > strong { color: var(--admin-text); font-weight: 560; }
 .admin-back {
   display: grid;
   width: 30px;
@@ -556,19 +570,35 @@ async function logout() {
 
 <style>
 html.dark .admin-shell {
-  --admin-border: #2c3037;
-  --admin-bg: #111318;
-  --admin-surface: #15171b;
-  --admin-topbar-bg: rgba(21, 23, 27, .92);
-  --admin-text: #f3f4f6;
-  --admin-body: #b8bec7;
-  --admin-muted: #8e96a1;
-  --admin-faint: #505761;
-  --admin-hover: #202329;
-  --admin-active-text: #72aafc;
-  --admin-active-bg: rgba(68, 147, 248, .13);
-  --admin-avatar-bg: #eceff3;
-  --admin-avatar-text: #17191d;
-  --admin-menu-shadow: rgba(0, 0, 0, .34);
+  --admin-border: #242b36;
+  --admin-bg: #0d1015;
+  --admin-surface: #12161d;
+  --admin-topbar-bg: rgba(15, 19, 25, .86);
+  --admin-text: #eef3f9;
+  --admin-body: #b8c2cf;
+  --admin-muted: #8a95a5;
+  --admin-faint: #4b5563;
+  --admin-hover: #1a2029;
+  --admin-active-text: #8bb8ff;
+  --admin-active-bg: rgba(96, 165, 250, .14);
+  --admin-avatar-bg: #e8eef7;
+  --admin-avatar-text: #11151b;
+  --admin-menu-shadow: rgba(0, 0, 0, .5);
+}
+
+html.dark .admin-sidebar {
+  background: linear-gradient(180deg, #141922 0%, #10141b 100%);
+}
+
+html.dark .admin-topbar {
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .03);
+}
+
+html.dark .admin-nav-group a.active {
+  background: linear-gradient(90deg, rgba(96, 165, 250, .16), rgba(96, 165, 250, .04));
+}
+
+html.dark .admin-nav-group a.active:hover {
+  background: linear-gradient(90deg, rgba(96, 165, 250, .2), rgba(96, 165, 250, .06));
 }
 </style>

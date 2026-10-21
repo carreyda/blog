@@ -21,14 +21,15 @@ onMounted(async () => {
   if (!container.value) return
   const i18n = (window as Window & { VditorI18n?: IOptions['i18n'] }).VditorI18n
   if (!i18n) throw new Error('Vditor Chinese language pack failed to load')
+  const narrowScreen = window.matchMedia('(max-width: 720px)').matches
   editor = new Vditor(container.value, {
     cdn: '/vendor/vditor',
     i18n,
     lang: 'zh_CN',
     value: props.modelValue,
-    mode: 'sv',
+    mode: narrowScreen ? 'ir' : 'sv',
     theme: colorMode.value === 'dark' ? 'dark' : 'classic',
-    height: 720,
+    height: narrowScreen ? 560 : 720,
     cache: { enable: false },
     counter: { enable: true, type: 'text' },
     preview: { markdown: { toc: true }, hljs: { enable: true } },
@@ -178,5 +179,48 @@ defineExpose({ insertImage, toggleFullscreen })
 
 @keyframes editor-spin {
   to { transform: rotate(360deg); }
+}
+</style>
+
+<style>
+html.dark .vditor--dark {
+  --panel-background-color: #12161d;
+  --toolbar-background-color: #171c24;
+  --textarea-background-color: #0f1319;
+  --textarea-text-color: #d8e0ea;
+  --toolbar-icon-color: #93a1b3;
+  --toolbar-icon-hover-color: #eef4ff;
+  --border-color: #252d38;
+  --second-color: rgba(148, 163, 184, .36);
+  --count-background-color: rgba(255, 255, 255, .06);
+  --resize-background-color: #171c24;
+  --resize-icon-color: #93a1b3;
+  --resize-hover-background-color: #8bb8ff;
+  --resize-hover-icon-color: #0d1015;
+}
+
+html.dark .vditor--dark .vditor-toolbar {
+  border-bottom-color: #252d38;
+}
+
+html.dark .vditor--dark .vditor-preview {
+  background: #0f1319;
+}
+
+html.dark .vditor--dark .vditor-preview table th {
+  background: #1a2029;
+}
+
+html.dark .vditor--dark .vditor-preview table th,
+html.dark .vditor--dark .vditor-preview table td {
+  border-color: #2a3340;
+}
+
+html.dark .vditor--dark .vditor-preview code:not(.hljs) {
+  background: #1a2029;
+}
+
+html.dark .vditor--dark .vditor-counter {
+  color: #93a1b3;
 }
 </style>
