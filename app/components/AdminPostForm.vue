@@ -15,7 +15,10 @@ type Post = {
 const props = defineProps<{ post?: Post }>()
 const { notifySuccess, notifyError } = useAdminFeedback()
 const session = useState<{ csrfToken: string } | null>('admin-session')
-const editor = useTemplateRef<{ insertImage: (url: string, description: string) => void }>('editor')
+const editor = useTemplateRef<{
+  insertImage: (url: string, description: string) => void
+  toggleFullscreen: () => void
+}>('editor')
 const form = reactive({
   title: props.post?.title || '', summary: props.post?.summary || '',
   contentMarkdown: props.post?.contentMarkdown || '', coverImageUrl: props.post?.coverImageUrl || '',
@@ -24,6 +27,7 @@ const form = reactive({
   status: props.post?.status || 'PUBLISHED' as 'PUBLISHED' | 'ARCHIVED',
 })
 const pending = ref(false)
+const isFullscreen = ref(false)
 const { data: tagResponse } = await useFetch<{ data: Tag[] }>('/api/admin/tags')
 const tags = computed(() => tagResponse.value?.data || [])
 const wordCount = computed(() => form.contentMarkdown.trim() ? form.contentMarkdown.trim().split(/\s+/).length : 0)
@@ -65,6 +69,14 @@ function insertImage() {
   notifySuccess('图片已插入')
 }
 
+function toggleFullscreen() {
+  if (!editor.value) {
+    notifyError(new Error('请等待 Markdown 编辑器加载完成后重试。'), '全屏编辑失败')
+    return
+  }
+  editor.value.toggleFullscreen()
+}
+
 function shortcut(event: KeyboardEvent) {
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
     event.preventDefault()
@@ -93,11 +105,14 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
         <template #header>
           <div class="editor-toolbar">
             <div><strong>Markdown 正文</strong><span>{{ wordCount }} 字 · 约 {{ readingTime }} 分钟阅读</span></div>
-            <UButton type="button" size="sm" color="neutral" variant="soft" icon="i-lucide-image-plus" @click="insertImage">插入图片</UButton>
+            <div class="editor-actions">
+              <UButton type="button" size="sm" color="neutral" variant="soft" :icon="isFullscreen ? 'i-lucide-minimize-2' : 'i-lucide-maximize-2'" @click="toggleFullscreen">{{ isFullscreen ? '退出全屏' : '全屏编辑' }}</UButton>
+              <UButton type="button" size="sm" color="neutral" variant="soft" icon="i-lucide-image-plus" @click="insertImage">插入图片</UButton>
+            </div>
           </div>
         </template>
         <ClientOnly>
-          <MarkdownEditor ref="editor" v-model="form.contentMarkdown" />
+          <MarkdownEditor ref="editor" v-model="form.contentMarkdown" @fullscreen-change="isFullscreen = $event" />
           <template #fallback><div class="editor-loading"><UIcon name="i-lucide-loader-circle" class="loading-icon" /><span>编辑器加载中…</span></div></template>
         </ClientOnly>
       </UCard>
@@ -192,6 +207,12 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
   margin-top: 4px;
   color: var(--color-text-secondary);
   font-size: 11px;
+}
+
+.editor-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .editor-loading {
@@ -363,8 +384,13 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
     flex-direction: column;
   }
 
-  .editor-toolbar :deep(button) {
+  .editor-actions {
     width: 100%;
+  }
+
+  .editor-actions :deep(button) {
+    flex: 1;
+    width: auto;
     justify-content: center;
   }
 }
