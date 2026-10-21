@@ -4,6 +4,10 @@ const loggingOut = ref(false)
 const { notifySuccess, notifyError } = useAdminFeedback()
 const mobileNavOpen = ref(false)
 const accountMenuOpen = ref(false)
+const sidebarCollapsed = useCookie<boolean>('admin-sidebar-collapsed', {
+  default: () => false,
+  sameSite: 'lax',
+})
 const route = useRoute()
 const router = useRouter()
 const navigation = [
@@ -32,6 +36,10 @@ watch(() => route.fullPath, () => {
   mobileNavOpen.value = false
   accountMenuOpen.value = false
 })
+
+function toggleSidebar() {
+  sidebarCollapsed.value = !sidebarCollapsed.value
+}
 
 onMounted(() => {
   window.setTimeout(() => {
@@ -65,18 +73,31 @@ async function logout() {
 </script>
 
 <template>
-  <div class="admin-shell">
+  <div class="admin-shell" :class="{ 'is-sidebar-collapsed': sidebarCollapsed }">
     <Transition name="admin-fade">
       <button v-if="mobileNavOpen" class="admin-overlay" aria-label="关闭导航" @click="mobileNavOpen = false" />
     </Transition>
 
     <aside class="admin-sidebar" :class="{ 'is-open': mobileNavOpen }">
       <div class="admin-sidebar-head">
-        <NuxtLink class="admin-brand" to="/admin">
+        <NuxtLink class="admin-brand" to="/admin" aria-label="Blog Admin">
           <span class="admin-brand-mark" aria-hidden="true">//</span>
           <strong>Blog Admin</strong>
         </NuxtLink>
-        <UButton class="admin-sidebar-close" icon="i-lucide-x" color="neutral" variant="ghost" square aria-label="关闭导航" @click="mobileNavOpen = false" />
+        <div class="admin-sidebar-head-actions">
+          <UButton
+            class="admin-collapse-button"
+            :icon="sidebarCollapsed ? 'i-lucide-panel-left-open' : 'i-lucide-panel-left-close'"
+            color="neutral"
+            variant="ghost"
+            square
+            :aria-expanded="!sidebarCollapsed"
+            :aria-label="sidebarCollapsed ? '展开侧栏' : '收起侧栏'"
+            :title="sidebarCollapsed ? '展开侧栏' : '收起侧栏'"
+            @click="toggleSidebar"
+          />
+          <UButton class="admin-sidebar-close" icon="i-lucide-x" color="neutral" variant="ghost" square aria-label="关闭导航" @click="mobileNavOpen = false" />
+        </div>
       </div>
 
       <nav aria-label="后台导航">
@@ -92,6 +113,8 @@ async function logout() {
             :key="item.to"
             :to="item.to"
             :class="{ active: route.path === item.to || (item.to !== '/admin' && route.path.startsWith(`${item.to}/`)) }"
+            :aria-label="item.label"
+            :title="item.label"
           >
             <UIcon class="admin-nav-icon" :name="item.icon" aria-hidden="true" />
             <span>{{ item.label }}</span>
@@ -101,7 +124,13 @@ async function logout() {
 
       <div class="admin-sidebar-footer">
         <div class="admin-account-wrap">
-          <button class="admin-user" type="button" :aria-expanded="accountMenuOpen" @click="accountMenuOpen = !accountMenuOpen">
+          <button
+            class="admin-user"
+            type="button"
+            :aria-expanded="accountMenuOpen"
+            :aria-label="`账号菜单：${session?.user.username || 'Carreyda'}`"
+            @click="accountMenuOpen = !accountMenuOpen"
+          >
             <span class="admin-avatar">{{ session?.user.username?.slice(0, 1).toUpperCase() || 'C' }}</span>
             <span>
               <strong>{{ session?.user.username || 'Carreyda' }}</strong>
@@ -116,7 +145,7 @@ async function logout() {
             </div>
           </Transition>
         </div>
-        <ColorModeSwitcher variant="admin" />
+        <div class="admin-theme"><ColorModeSwitcher variant="admin" /></div>
       </div>
     </aside>
 
@@ -159,6 +188,7 @@ async function logout() {
   color: var(--admin-text);
   background: var(--admin-bg);
   font-family: system-ui, "PingFang SC", "Microsoft YaHei", sans-serif;
+  transition: grid-template-columns .2s ease;
 }
 
 .admin-sidebar {
@@ -171,6 +201,7 @@ async function logout() {
   padding: 27px 21px 22px;
   border-right: 1px solid var(--admin-border);
   background: var(--admin-surface);
+  transition: padding .2s ease;
 }
 
 .admin-sidebar-head {
@@ -179,6 +210,12 @@ async function logout() {
   align-items: center;
   justify-content: space-between;
   padding: 0 9px;
+}
+
+.admin-sidebar-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .admin-brand {
@@ -259,6 +296,10 @@ async function logout() {
   gap: 22px;
   padding: 24px 0 34px;
   border-top: 1px solid var(--admin-border);
+}
+
+.admin-theme {
+  display: grid;
 }
 
 .admin-account-wrap {
@@ -402,6 +443,91 @@ async function logout() {
 .admin-pop-enter-from,
 .admin-pop-leave-to { transform: translateY(5px); }
 
+@media (min-width: 901px) {
+  .admin-shell.is-sidebar-collapsed {
+    grid-template-columns: 84px minmax(0, 1fr);
+  }
+
+  .is-sidebar-collapsed .admin-sidebar {
+    padding-inline: 10px;
+  }
+
+  .is-sidebar-collapsed .admin-sidebar-head {
+    padding-inline: 2px;
+  }
+
+  .is-sidebar-collapsed .admin-brand {
+    justify-content: center;
+  }
+
+  .is-sidebar-collapsed .admin-brand strong {
+    display: none;
+  }
+
+  .is-sidebar-collapsed .admin-sidebar-head-actions {
+    gap: 0;
+  }
+
+  .is-sidebar-collapsed .admin-nav-group p {
+    display: none;
+  }
+
+  .is-sidebar-collapsed .admin-nav-group a {
+    min-height: 48px;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .is-sidebar-collapsed .admin-nav-group a > span {
+    display: none;
+  }
+
+  .is-sidebar-collapsed .admin-nav-group + .admin-nav-group {
+    margin-top: 14px;
+  }
+
+  .is-sidebar-collapsed .admin-nav-group.has-divider {
+    margin-top: 20px;
+    padding-top: 16px;
+  }
+
+  .is-sidebar-collapsed .admin-sidebar-footer {
+    gap: 12px;
+    padding: 20px 0;
+  }
+
+  .is-sidebar-collapsed .admin-account-wrap {
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+
+  .is-sidebar-collapsed .admin-user {
+    grid-template-columns: 44px;
+    justify-content: center;
+    gap: 0;
+  }
+
+  .is-sidebar-collapsed .admin-user > span:nth-child(2),
+  .is-sidebar-collapsed .admin-user > svg {
+    display: none;
+  }
+
+  .is-sidebar-collapsed .admin-theme {
+    display: none;
+  }
+
+  .is-sidebar-collapsed .admin-account-menu {
+    right: auto;
+    bottom: 0;
+    left: 56px;
+    width: 180px;
+  }
+
+  .is-sidebar-collapsed .admin-collapse-button {
+    margin-inline: auto;
+  }
+}
+
 @media (max-width: 900px) {
   .admin-shell { grid-template-columns: 1fr; }
   .admin-sidebar {
@@ -415,6 +541,7 @@ async function logout() {
   .admin-sidebar.is-open { transform: translateX(0); }
   .admin-sidebar-close,
   .admin-menu-button { display: inline-flex; }
+  .admin-collapse-button { display: none; }
   .admin-back,
   .admin-crumb-arrow { display: none; }
   .admin-topbar { height: 66px; padding-inline: 18px; }
