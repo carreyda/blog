@@ -7,14 +7,14 @@ const session = useState<{ csrfToken: string } | null>('admin-session')
 const { notifySuccess, notifyError } = useAdminFeedback()
 const deletingId = ref<number | null>(null)
 const search = ref('')
-const status = ref('')
+const status = ref('ALL')
 const page = ref(1)
 const statusItems = [
-  { label: '全部状态', value: '' },
+  { label: '全部状态', value: 'ALL' },
   { label: '已发布', value: 'PUBLISHED' },
   { label: '已归档', value: 'ARCHIVED' },
 ]
-const query = computed(() => ({ page: page.value, pageSize: 20, q: search.value || undefined, status: status.value || undefined }))
+const query = computed(() => ({ page: page.value, pageSize: 20, q: search.value || undefined, status: status.value === 'ALL' ? undefined : status.value }))
 const { data: response, pending, refresh } = await useFetch<{ data: { items: Post[]; total: number; pageSize: number } }>('/api/admin/posts', { query })
 const posts = computed(() => response.value?.data.items || [])
 const total = computed(() => response.value?.data.total || 0)
