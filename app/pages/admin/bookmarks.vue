@@ -27,6 +27,7 @@ type Bookmark = {
 
 const session = useState<{ csrfToken: string } | null>('admin-session')
 const { notifySuccess, notifyError } = useAdminFeedback()
+const { confirm } = useAdminConfirm()
 const deletingCategoryId = ref<number | null>(null)
 const deletingBookmarkId = ref<number | null>(null)
 const { data: categoryResponse, refresh: refreshCategories } = await useFetch<{ data: Category[] }>('/api/admin/bookmark-categories')
@@ -91,8 +92,19 @@ const parentOptions = computed(() => {
       value: category.id,
     }))
 })
-const filterCategoryIds = computed(() => {
-  if (!filterCategoryId.value) return null
+const parentSelectItems = computed(() => [
+  { label: '无（一级分类）', value: 0 },
+  ...parentOptions.value,
+])
+const parentSelectValue = computed({
+  get: () => categoryForm.parentId ?? 0,
+  set: (value: number) => { categoryForm.parentId = value === 0 ? null : Number(value) },
+})
+const filterItems = computed(() => [
+  { label: '全部分类', value: 0 },
+  ...categoryOptions.value,
+])
+const filterCategoryIds = computed(() => {  if (!filterCategoryId.value) return null
 
   const category = flatCategories.value.find(item => item.id === filterCategoryId.value)
   if (!category) return new Set([filterCategoryId.value])
@@ -162,7 +174,8 @@ async function saveCategory() {
 }
 
 async function removeCategory(category: FlatCategory) {
-  if (!session.value || deletingCategoryId.value !== null || !window.confirm(`确定删除分类“${category.name}”吗？`)) return
+  if (!session.value || deletingCategoryId.value !== null) return
+  if (!(await confirm({ title: '删除分类', message: `确定删除分类“${category.name}”吗？`, confirmLabel: '删除', color: 'error' }))) return
   deletingCategoryId.value = category.id
   try {
     await $fetch(`/api/admin/bookmark-categories/${category.id}`, {
@@ -235,7 +248,8 @@ async function saveBookmark() {
 }
 
 async function removeBookmark(bookmark: Bookmark) {
-  if (!session.value || deletingBookmarkId.value !== null || !window.confirm(`确定删除收藏“${bookmark.name}”吗？`)) return
+  if (!session.value || deletingBookmarkId.value !== null) return
+  if (!(await confirm({ title: '删除收藏', message: `确定删除收藏“${bookmark.name}”吗？`, confirmLabel: '删除', color: 'error' }))) return
   deletingBookmarkId.value = bookmark.id
   try {
     await $fetch(`/api/admin/bookmarks/${bookmark.id}`, {
@@ -281,10 +295,7 @@ function markIconBroken(id: number) {
             </div>
             <UFormField label="分类名称" required><UInput v-model="categoryForm.name" class="w-full" placeholder="例如：开发资源" /></UFormField>
             <UFormField label="父分类" description="留空表示一级分类，可选择任意已有分类">
-              <select v-model="categoryForm.parentId" class="native-select">
-                <option :value="null">无（一级分类）</option>
-                <option v-for="item in parentOptions" :key="item.value" :value="item.value">{{ item.label }}</option>
-              </select>
+              <USelect v-model="parentSelectValue" :items="parentSelectItems" value-key="value" class="w-full" />
             </UFormField>
             <UFormField label="排序"><UInput v-model.number="categoryForm.sort" type="number" min="-9999" max="9999" class="w-full" /></UFormField>
             <div class="form-actions">
@@ -294,7 +305,7 @@ function markIconBroken(id: number) {
           </form>
         </Transition>
 
-        <div v-if="!categories.length" class="empty-state"><UIcon name="i-lucide-folder-plus" /><strong>暂无分类</strong><p>先创建一级分类，再继续添加子分类。</p></div>
+        <UEmpty v-if="!categories.length" variant="naked" icon="i-lucide-folder-plus" title="暂无分类" description="先创建一级分类，再继续添加子分类。" />
         <div v-else class="category-tree">
           <div
             v-for="category in flatCategories"
@@ -321,7 +332,7 @@ function markIconBroken(id: number) {
               <div><strong>全部收藏</strong><p>显示 {{ filteredBookmarks.length }} / {{ bookmarks.length }} 项</p></div>
               <UButton size="sm" icon="i-lucide-plus" @click="startCreateBookmark()">新增收藏</UButton>
             </div>
-            <div class="filters"><UInput v-model="search" icon="i-lucide-search" placeholder="搜索名称、描述或网址" /><select v-model.number="filterCategoryId" class="native-select compact"><option :value="0">全部分类</option><option v-for="item in categoryOptions" :key="item.value" :value="item.value">{{ item.label }}</option></select></div>
+            <div class="filters"><UInput v-model="search" icon="i-lucide-search" placeholder="搜索名称、描述或网址" /><USelect v-model.number="filterCategoryId" :items="filterItems" value-key="value" class="filter-select" /></div>
           </div>
         </template>
 
@@ -333,10 +344,7 @@ function markIconBroken(id: number) {
             </div>
             <div class="bookmark-fields">
               <UFormField label="所属分类" required>
-                <select v-model.number="bookmarkForm.categoryId" class="native-select" :disabled="!categoryOptions.length">
-                  <option v-if="!categoryOptions.length" :value="0">请先创建分类</option>
-                  <option v-for="item in categoryOptions" :key="item.value" :value="item.value">{{ item.label }}</option>
-                </select>
+                <USelect v-model.number="bookmarkForm.categoryId" :items="categoryOptions" value-key="value" :disabled="!categoryOptions.length" placeholder="请先创建分类" class="w-full" />
               </UFormField>
               <UFormField label="收藏名称" required><UInput v-model="bookmarkForm.name" class="w-full" placeholder="网站名称" /></UFormField>
               <UFormField label="网站 URL" required><UInput v-model="bookmarkForm.url" icon="i-lucide-link" class="w-full" placeholder="https://example.com" /></UFormField>
@@ -352,7 +360,7 @@ function markIconBroken(id: number) {
           </form>
         </Transition>
 
-        <div v-if="!filteredBookmarks.length" class="empty-state"><UIcon name="i-lucide-bookmark" /><strong>暂无收藏</strong><p>添加网站后会在这里集中管理。</p></div>
+        <UEmpty v-if="!filteredBookmarks.length" variant="naked" icon="i-lucide-bookmark" title="暂无收藏" description="添加网站后会在这里集中管理。" />
         <div v-else class="bookmark-list">
           <article v-for="bookmark in filteredBookmarks" :key="bookmark.id" class="bookmark-row">
             <span class="bookmark-icon">
@@ -476,27 +484,8 @@ function markIconBroken(id: number) {
   transform: translateY(-4px);
 }
 
-.native-select {
+.filter-select {
   width: 100%;
-  min-height: 34px;
-  padding: 0 34px 0 11px;
-  border: 1px solid var(--color-border);
-  border-radius: 7px;
-  outline: 0;
-  color: var(--color-text);
-  background: var(--color-background);
-  font: inherit;
-  font-size: 12px;
-}
-
-.native-select:focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb,var(--color-primary) 12%,transparent);
-}
-
-.native-select:disabled {
-  cursor: not-allowed;
-  opacity: .5;
 }
 
 .form-actions {
@@ -609,10 +598,6 @@ function markIconBroken(id: number) {
   gap: 8px;
 }
 
-.native-select.compact {
-  min-height: 32px;
-}
-
 .bookmark-row {
   display: grid;
   grid-template-columns: 42px minmax(0,1fr) 64px;
@@ -709,32 +694,6 @@ function markIconBroken(id: number) {
 .bookmark-url svg {
   width: 12px;
   flex: 0 0 auto;
-}
-
-.empty-state {
-  display: grid;
-  min-height: 230px;
-  place-items: center;
-  align-content: center;
-  gap: 8px;
-  text-align: center;
-}
-
-.empty-state>svg {
-  width: 25px;
-  height: 25px;
-  margin-bottom: 3px;
-  color: var(--color-text-muted);
-}
-
-.empty-state strong {
-  font-size: 12.5px;
-}
-
-.empty-state p {
-  margin: 0;
-  color: var(--color-text-muted);
-  font-size: 10.5px;
 }
 
 @media (max-width: 1100px) {

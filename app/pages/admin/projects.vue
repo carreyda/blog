@@ -16,6 +16,7 @@ const blank = () => ({ name: '', summary: '', status: 'ACTIVE' as Project['statu
 const form = reactive(blank())
 const editingId = ref<number | null>(null)
 const { notifySuccess, notifyError } = useAdminFeedback()
+const { confirm } = useAdminConfirm()
 const deletingId = ref<number | null>(null)
 const pending = ref(false)
 
@@ -25,7 +26,7 @@ const statusColor = (status: Project['status']) => ({ ACTIVE: 'success', BUILDIN
 function edit(project: Project) {
   editingId.value = project.id
   Object.assign(form, { ...project, websiteUrl: project.websiteUrl || '', githubUrl: project.githubUrl || '', techStack: project.techStack.join(', ') })
-  window.scrollTo({ top: 0, behavior: 'smooth' })
+  document.querySelector('.admin-panel-body')?.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 function reset() {
@@ -51,7 +52,8 @@ async function save() {
 }
 
 async function remove(project: Project) {
-  if (!session.value || deletingId.value !== null || !window.confirm(`确定永久删除“${project.name}”吗？`)) return
+  if (!session.value || deletingId.value !== null) return
+  if (!(await confirm({ title: '删除项目', message: `确定永久删除“${project.name}”吗？`, confirmLabel: '删除', color: 'error' }))) return
   deletingId.value = project.id
   try {
     await $fetch(`/api/admin/projects/${project.id}`, { method: 'DELETE', headers: { 'X-CSRF-Token': session.value.csrfToken } })

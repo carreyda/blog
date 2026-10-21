@@ -10,6 +10,7 @@ const form = reactive({ name: '', slug: '' })
 const editingId = ref<number | null>(null)
 const pending = ref(false)
 const { notifySuccess, notifyError } = useAdminFeedback()
+const { confirm } = useAdminConfirm()
 const deletingId = ref<number | null>(null)
 
 function edit(tag: Tag) {
@@ -42,7 +43,8 @@ async function save() {
 }
 
 async function remove(tag: Tag) {
-  if (!session.value || deletingId.value !== null || !window.confirm(`确定删除标签“${tag.name}”吗？文章不会被删除。`)) return
+  if (!session.value || deletingId.value !== null) return
+  if (!(await confirm({ title: '删除标签', message: `确定删除标签“${tag.name}”吗？文章不会被删除。`, confirmLabel: '删除', color: 'error' }))) return
   deletingId.value = tag.id
   try {
     await $fetch(`/api/admin/tags/${tag.id}`, { method: 'DELETE', headers: { 'X-CSRF-Token': session.value.csrfToken } })

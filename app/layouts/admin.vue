@@ -2,28 +2,25 @@
 const session = useState<{ csrfToken: string; user: { id: number; username: string; role: 'ADMIN' } } | null>('admin-session', () => null)
 const loggingOut = ref(false)
 const { notifySuccess, notifyError } = useAdminFeedback()
-const mobileNavOpen = ref(false)
-const accountMenuOpen = ref(false)
-const sidebarCollapsed = useCookie<boolean>('admin-sidebar-collapsed', {
-  default: () => false,
-  sameSite: 'lax',
-})
 const route = useRoute()
 const router = useRouter()
-const navigation = [
-  { label: '', items: [{ label: '仪表盘', to: '/admin', icon: 'i-lucide-house' }] },
-  {
-    label: '内容管理',
-    items: [
-      { label: '文章管理', to: '/admin/posts', icon: 'i-lucide-notebook-text' },
-      { label: '标签管理', to: '/admin/tags', icon: 'i-lucide-tag' },
-      { label: '项目管理', to: '/admin/projects', icon: 'i-lucide-panels-top-left' },
-      { label: '收藏管理', to: '/admin/bookmarks', icon: 'i-lucide-bookmark' },
-    ],
-  },
-  { label: '', divider: true, items: [{ label: '网站设置', to: '/admin/settings', icon: 'i-lucide-settings' }] },
+
+const dashboardItem = { label: '仪表盘', icon: 'i-lucide-house', to: '/admin', exact: true }
+const contentItems = [
+  { label: '文章管理', icon: 'i-lucide-notebook-text', to: '/admin/posts' },
+  { label: '标签管理', icon: 'i-lucide-tag', to: '/admin/tags' },
+  { label: '项目管理', icon: 'i-lucide-panels-top-left', to: '/admin/projects' },
+  { label: '收藏管理', icon: 'i-lucide-bookmark', to: '/admin/bookmarks' },
 ]
-const flatNavigation = navigation.flatMap(group => group.items)
+const navigationItems = [
+  dashboardItem,
+  { label: '内容管理', type: 'label' as const },
+  ...contentItems,
+]
+const settingsItems = [
+  { label: '网站设置', icon: 'i-lucide-settings', to: '/admin/settings' },
+]
+const flatNavigation = [dashboardItem, ...contentItems, ...settingsItems]
 const currentPage = computed(() => {
   if (route.path === '/admin/posts/new') return '新建文章'
   if (/^\/admin\/posts\/[^/]+\/edit\/?$/.test(route.path)) return '编辑文章'
@@ -31,15 +28,22 @@ const currentPage = computed(() => {
     .find(item => route.path === item.to || (item.to !== '/admin' && route.path.startsWith(`${item.to}/`)))
   return match?.label || '管理后台'
 })
+const userInitial = computed(() => session.value?.user.username?.slice(0, 1).toUpperCase() || 'C')
 
-watch(() => route.fullPath, () => {
-  mobileNavOpen.value = false
-  accountMenuOpen.value = false
-})
-
-function toggleSidebar() {
-  sidebarCollapsed.value = !sidebarCollapsed.value
-}
+const accountItems = computed(() => [
+  [
+    { label: '查看博客', icon: 'i-lucide-external-link', to: '/', target: '_blank' as const },
+  ],
+  [
+    {
+      label: loggingOut.value ? '退出中…' : '退出登录',
+      icon: 'i-lucide-log-out',
+      color: 'error' as const,
+      disabled: loggingOut.value,
+      onSelect: () => { void logout() },
+    },
+  ],
+])
 
 onMounted(() => {
   window.setTimeout(() => {
@@ -73,100 +77,93 @@ async function logout() {
 </script>
 
 <template>
-  <div class="admin-shell" :class="{ 'is-sidebar-collapsed': sidebarCollapsed }">
-    <Transition name="admin-fade">
-      <button v-if="mobileNavOpen" class="admin-overlay" aria-label="关闭导航" @click="mobileNavOpen = false" />
-    </Transition>
-
-    <aside class="admin-sidebar" :class="{ 'is-open': mobileNavOpen }">
-      <div class="admin-sidebar-head">
+  <UDashboardGroup storage="cookie" storage-key="blog-admin" unit="px" class="admin-shell">
+    <UDashboardSidebar
+      collapsible
+      :default-size="288"
+      :min-size="240"
+      :max-size="340"
+      :collapsed-size="84"
+      :ui="{
+        root: 'admin-sidebar',
+        header: 'admin-sidebar-head',
+        body: 'admin-sidebar-body',
+        footer: 'admin-sidebar-footer',
+        content: 'admin-sidebar-drawer',
+      }"
+    >
+      <template #header="{ collapsed }">
         <NuxtLink class="admin-brand" to="/admin" aria-label="Blog Admin">
           <span class="admin-brand-mark" aria-hidden="true">//</span>
-          <strong>Blog Admin</strong>
+          <strong v-if="!collapsed">Blog Admin</strong>
         </NuxtLink>
-        <div class="admin-sidebar-head-actions">
-          <UButton
-            class="admin-collapse-button"
-            :icon="sidebarCollapsed ? 'i-lucide-panel-left-open' : 'i-lucide-panel-left-close'"
-            color="neutral"
-            variant="ghost"
-            square
-            :aria-expanded="!sidebarCollapsed"
-            :aria-label="sidebarCollapsed ? '展开侧栏' : '收起侧栏'"
-            :title="sidebarCollapsed ? '展开侧栏' : '收起侧栏'"
-            @click="toggleSidebar"
-          />
-          <UButton class="admin-sidebar-close" icon="i-lucide-x" color="neutral" variant="ghost" square aria-label="关闭导航" @click="mobileNavOpen = false" />
-        </div>
-      </div>
+        <UDashboardSidebarCollapse class="admin-collapse-button" />
+      </template>
 
-      <nav aria-label="后台导航">
-        <section
-          v-for="group in navigation"
-          :key="group.label || group.items[0]?.to"
-          class="admin-nav-group"
-          :class="{ 'has-divider': group.divider }"
-        >
-          <p v-if="group.label">{{ group.label }}</p>
-          <NuxtLink
-            v-for="item in group.items"
-            :key="item.to"
-            :to="item.to"
-            :class="{ active: route.path === item.to || (item.to !== '/admin' && route.path.startsWith(`${item.to}/`)) }"
-            :aria-label="item.label"
-            :title="item.label"
-          >
-            <UIcon class="admin-nav-icon" :name="item.icon" aria-hidden="true" />
-            <span>{{ item.label }}</span>
-          </NuxtLink>
-        </section>
-      </nav>
+      <template #default="{ collapsed }">
+        <UNavigationMenu
+          :items="navigationItems"
+          orientation="vertical"
+          :collapsed="collapsed"
+          tooltip
+          class="admin-nav-menu"
+        />
+        <USeparator class="admin-nav-separator" />
+        <UNavigationMenu
+          :items="settingsItems"
+          orientation="vertical"
+          :collapsed="collapsed"
+          tooltip
+          class="admin-nav-menu"
+        />
+      </template>
 
-      <div class="admin-sidebar-footer">
-        <div class="admin-account-wrap">
-          <button
-            class="admin-user"
-            type="button"
-            :aria-expanded="accountMenuOpen"
-            :aria-label="`账号菜单：${session?.user.username || 'Carreyda'}`"
-            @click="accountMenuOpen = !accountMenuOpen"
-          >
-            <span class="admin-avatar">{{ session?.user.username?.slice(0, 1).toUpperCase() || 'C' }}</span>
-            <span>
-              <strong>{{ session?.user.username || 'Carreyda' }}</strong>
-              <small>管理员</small>
-            </span>
-            <UIcon name="i-lucide-chevron-down" :class="{ rotated: accountMenuOpen }" />
-          </button>
-          <Transition name="admin-pop">
-            <div v-if="accountMenuOpen" class="admin-account-menu">
-              <NuxtLink to="/" target="_blank"><UIcon name="i-lucide-external-link" />查看博客</NuxtLink>
-              <button type="button" :disabled="loggingOut" @click="logout"><UIcon name="i-lucide-log-out" />{{ loggingOut ? '退出中…' : '退出登录' }}</button>
-            </div>
-          </Transition>
+      <template #footer="{ collapsed }">
+        <div class="admin-sidebar-footer-inner">
+          <UDropdownMenu :items="accountItems" :content="{ align: 'end' }" class="admin-user-menu">
+            <UButton block color="neutral" variant="ghost" class="admin-user-button">
+              <UAvatar :text="userInitial" size="md" />
+              <span v-if="!collapsed" class="admin-user-copy">
+                <strong>{{ session?.user.username || 'Carreyda' }}</strong>
+                <small>管理员</small>
+              </span>
+              <UIcon v-if="!collapsed" name="i-lucide-chevron-down" class="admin-user-chevron" />
+            </UButton>
+          </UDropdownMenu>
+          <div v-if="!collapsed" class="admin-theme-switcher">
+            <ColorModeSwitcher variant="admin" />
+          </div>
         </div>
-        <div class="admin-theme"><ColorModeSwitcher variant="admin" /></div>
-      </div>
-    </aside>
+      </template>
+    </UDashboardSidebar>
 
-    <div class="admin-workspace">
-      <header class="admin-topbar">
-        <div class="admin-topbar-left">
-          <UButton class="admin-menu-button" icon="i-lucide-menu" color="neutral" variant="ghost" square aria-label="打开导航" @click="mobileNavOpen = true" />
-          <button class="admin-back" type="button" aria-label="返回上一页" @click="router.back()"><UIcon name="i-lucide-arrow-left" /></button>
-          <UIcon class="admin-crumb-arrow" name="i-lucide-chevron-right" />
-          <strong>{{ currentPage }}</strong>
+    <UDashboardPanel class="admin-workspace" :ui="{ body: 'admin-panel-body' }">
+      <template #header>
+        <UDashboardNavbar :toggle="false" class="admin-topbar">
+          <template #left>
+            <UDashboardSidebarToggle />
+            <UButton class="admin-back" icon="i-lucide-arrow-left" color="neutral" variant="ghost" square aria-label="返回上一页" @click="router.back()" />
+            <UIcon class="admin-crumb-arrow" name="i-lucide-chevron-right" />
+            <strong class="admin-page-title">{{ currentPage }}</strong>
+          </template>
+          <template #right>
+            <UButton v-if="route.path !== '/admin/posts/new'" to="/admin/posts/new" icon="i-lucide-pen-line" size="sm">新建文章</UButton>
+          </template>
+        </UDashboardNavbar>
+      </template>
+
+      <template #body>
+        <div class="admin-main">
+          <slot />
         </div>
-        <UButton v-if="route.path !== '/admin/posts/new'" to="/admin/posts/new" icon="i-lucide-pen-line" size="lg">新建文章</UButton>
-      </header>
-      <main class="admin-main">
-        <div class="admin-content"><slot /></div>
-      </main>
-    </div>
-  </div>
+      </template>
+    </UDashboardPanel>
+  </UDashboardGroup>
+
+  <AdminConfirmDialog />
 </template>
 
-<style scoped>
+<style>
 .admin-shell {
   --admin-border: #e1e4e8;
   --admin-bg: #fdfdfd;
@@ -182,44 +179,32 @@ async function logout() {
   --admin-avatar-bg: #171717;
   --admin-avatar-text: #fff;
   --admin-menu-shadow: rgba(15, 23, 42, .12);
-  display: grid;
-  min-height: 100vh;
-  grid-template-columns: 288px minmax(0, 1fr);
   color: var(--admin-text);
   background: var(--admin-bg);
   font-family: system-ui, "PingFang SC", "Microsoft YaHei", sans-serif;
-  transition: grid-template-columns .2s ease;
 }
 
 .admin-sidebar {
-  position: sticky;
-  top: 0;
-  z-index: 30;
-  display: flex;
-  height: 100vh;
-  flex-direction: column;
-  padding: 27px 21px 22px;
-  border-right: 1px solid var(--admin-border);
   background: var(--admin-surface);
-  transition: padding .2s ease;
+  border-color: var(--admin-border);
 }
 
 .admin-sidebar-head {
-  display: flex;
-  height: 38px;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 9px;
+  gap: 10px;
 }
 
-.admin-sidebar-head-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
+.admin-sidebar[data-collapsed="true"] .admin-sidebar-head {
+  gap: 2px;
+  padding-inline: 8px;
+}
+
+.admin-sidebar[data-collapsed="true"] .admin-brand strong {
+  display: none;
 }
 
 .admin-brand {
   display: flex;
+  min-width: 0;
   align-items: center;
   gap: 9px;
   color: var(--admin-text);
@@ -237,338 +222,116 @@ async function logout() {
   font-size: 16px;
   font-weight: 680;
   letter-spacing: -.02em;
+  white-space: nowrap;
 }
 
-.admin-sidebar-close,
-.admin-menu-button { display: none; }
-
-.admin-sidebar nav {
-  display: grid;
-  flex: 1;
-  align-content: start;
-  margin-top: 28px;
-  overflow-y: auto;
+.admin-collapse-button {
+  margin-left: auto;
 }
 
-.admin-nav-group { display: grid; gap: 4px; }
-.admin-nav-group + .admin-nav-group { margin-top: 22px; }
-.admin-nav-group.has-divider {
-  margin-top: 30px;
-  padding-top: 25px;
-  border-top: 1px solid var(--admin-border);
+.admin-sidebar-body {
+  padding-top: 8px;
 }
 
-.admin-nav-group p {
-  margin: 0 10px 10px;
-  color: var(--admin-muted);
-  font-size: 11.5px;
-  font-weight: 500;
-  letter-spacing: .06em;
+.admin-nav-menu {
+  width: 100%;
 }
 
-.admin-nav-group a {
-  position: relative;
-  display: flex;
-  min-height: 54px;
-  align-items: center;
-  gap: 14px;
-  padding: 0 14px;
-  border-radius: 9px;
-  color: var(--admin-body);
-  font-size: 14px;
-  font-weight: 480;
-  transition: color .15s ease, background .15s ease;
-}
-
-.admin-nav-icon {
-  width: 20px;
-  height: 20px;
-  flex: 0 0 auto;
-  font-size: 20px;
-}
-
-.admin-nav-group a:hover { color: var(--admin-text); background: var(--admin-hover); }
-.admin-nav-group a.active {
-  color: var(--admin-active-text);
-  background: var(--admin-active-bg);
-  font-weight: 570;
-}
-
-.admin-nav-group a.active::before {
-  position: absolute;
-  top: 14px;
-  bottom: 14px;
-  left: 0;
-  width: 2px;
-  border-radius: 2px;
-  background: var(--admin-active-text);
-  content: "";
+.admin-nav-separator {
+  margin-block: 10px;
 }
 
 .admin-sidebar-footer {
-  display: grid;
-  gap: 22px;
-  padding: 24px 0 34px;
-  border-top: 1px solid var(--admin-border);
+  padding-block: 14px;
 }
 
-.admin-theme {
-  display: grid;
-}
-
-.admin-account-wrap {
-  position: relative;
-  padding-bottom: 20px;
-  border-bottom: 1px solid var(--admin-border);
-}
-
-.admin-user {
+.admin-sidebar-footer-inner {
   display: grid;
   width: 100%;
-  grid-template-columns: 44px minmax(0, 1fr) 20px;
-  align-items: center;
   gap: 12px;
-  padding: 0;
-  border: 0;
-  color: var(--admin-text);
-  background: transparent;
-  text-align: left;
-  cursor: pointer;
 }
 
-.admin-avatar {
+.admin-user-menu {
+  width: 100%;
+}
+
+.admin-user-button {
+  justify-content: flex-start;
+  padding: 6px 7px;
+  font-weight: 500;
+}
+
+.admin-user-copy {
   display: grid;
-  width: 44px;
-  height: 44px;
-  place-items: center;
-  border-radius: 50%;
-  color: var(--admin-avatar-text);
-  background: var(--admin-avatar-bg);
-  font-size: 14px;
-  font-weight: 700;
+  min-width: 0;
+  gap: 2px;
+  margin-left: 4px;
+  text-align: left;
 }
 
-.admin-user > span:nth-child(2) { display: grid; min-width: 0; gap: 3px; }
-.admin-user strong {
+.admin-user-copy strong {
   overflow: hidden;
-  font-size: 13px;
+  color: var(--admin-text);
+  font-size: 12.5px;
   font-weight: 650;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.admin-user small { color: var(--admin-muted); font-size: 12px; }
-.admin-user > svg {
-  width: 17px;
-  color: var(--admin-body);
-  transition: transform .16s ease;
-}
-.admin-user > svg.rotated { transform: rotate(180deg); }
 
-.admin-account-menu {
-  position: absolute;
-  right: 0;
-  bottom: 54px;
-  left: 0;
-  display: grid;
-  padding: 6px;
-  border: 1px solid var(--admin-border);
-  border-radius: 9px;
+.admin-user-copy small {
+  color: var(--admin-muted);
+  font-size: 11px;
+}
+
+.admin-user-chevron {
+  width: 15px;
+  height: 15px;
+  margin-left: auto;
+  color: var(--admin-muted);
+}
+
+.admin-theme-switcher {
+  width: 100%;
+}
+
+.admin-sidebar-drawer {
   background: var(--admin-surface);
-  box-shadow: 0 12px 35px var(--admin-menu-shadow);
 }
 
-.admin-account-menu a,
-.admin-account-menu button {
-  display: flex;
-  min-height: 36px;
-  align-items: center;
-  gap: 9px;
-  padding: 0 10px;
-  border: 0;
-  border-radius: 6px;
-  color: var(--admin-body);
-  background: transparent;
-  font: inherit;
-  font-size: 12px;
-  text-align: left;
-  cursor: pointer;
-}
-.admin-account-menu a:hover,
-.admin-account-menu button:hover { color: var(--admin-text); background: var(--admin-hover); }
-.admin-account-menu svg { width: 15px; }
-
-.admin-workspace { min-width: 0; }
 .admin-topbar {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  display: flex;
-  height: 78px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 0 34px;
-  border-bottom: 1px solid var(--admin-border);
   background: var(--admin-topbar-bg);
   backdrop-filter: blur(14px);
 }
 
 .admin-topbar-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: var(--admin-muted);
+  min-width: 0;
+}
+
+.admin-page-title {
+  overflow: hidden;
+  color: var(--admin-text);
   font-size: 13px;
-}
-.admin-topbar-left > strong { color: var(--admin-text); font-weight: 560; }
-.admin-back {
-  display: grid;
-  width: 30px;
-  height: 30px;
-  padding: 0;
-  place-items: center;
-  border: 0;
-  border-radius: 6px;
-  color: var(--admin-body);
-  background: transparent;
-  cursor: pointer;
-}
-.admin-back:hover { color: var(--admin-text); background: var(--admin-hover); }
-.admin-back svg { width: 18px; }
-.admin-crumb-arrow { width: 15px; color: var(--admin-faint); }
-.admin-main { width: 100%; min-width: 0; padding: 38px 34px 58px; }
-.admin-content { width: min(100%, 1400px); margin-inline: auto; }
-.admin-overlay {
-  position: fixed;
-  z-index: 25;
-  inset: 0;
-  border: 0;
-  background: rgba(0, 0, 0, .42);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.admin-fade-enter-active,
-.admin-fade-leave-active,
-.admin-pop-enter-active,
-.admin-pop-leave-active { transition: opacity .16s ease, transform .16s ease; }
-.admin-fade-enter-from,
-.admin-fade-leave-to,
-.admin-pop-enter-from,
-.admin-pop-leave-to { opacity: 0; }
-.admin-pop-enter-from,
-.admin-pop-leave-to { transform: translateY(5px); }
-
-@media (min-width: 901px) {
-  .admin-shell.is-sidebar-collapsed {
-    grid-template-columns: 84px minmax(0, 1fr);
-  }
-
-  .is-sidebar-collapsed .admin-sidebar {
-    padding-inline: 10px;
-  }
-
-  .is-sidebar-collapsed .admin-sidebar-head {
-    padding-inline: 2px;
-  }
-
-  .is-sidebar-collapsed .admin-brand {
-    justify-content: center;
-  }
-
-  .is-sidebar-collapsed .admin-brand strong {
-    display: none;
-  }
-
-  .is-sidebar-collapsed .admin-sidebar-head-actions {
-    gap: 0;
-  }
-
-  .is-sidebar-collapsed .admin-nav-group p {
-    display: none;
-  }
-
-  .is-sidebar-collapsed .admin-nav-group a {
-    min-height: 48px;
-    justify-content: center;
-    padding: 0;
-  }
-
-  .is-sidebar-collapsed .admin-nav-group a > span {
-    display: none;
-  }
-
-  .is-sidebar-collapsed .admin-nav-group + .admin-nav-group {
-    margin-top: 14px;
-  }
-
-  .is-sidebar-collapsed .admin-nav-group.has-divider {
-    margin-top: 20px;
-    padding-top: 16px;
-  }
-
-  .is-sidebar-collapsed .admin-sidebar-footer {
-    gap: 12px;
-    padding: 20px 0;
-  }
-
-  .is-sidebar-collapsed .admin-account-wrap {
-    padding-bottom: 0;
-    border-bottom: 0;
-  }
-
-  .is-sidebar-collapsed .admin-user {
-    grid-template-columns: 44px;
-    justify-content: center;
-    gap: 0;
-  }
-
-  .is-sidebar-collapsed .admin-user > span:nth-child(2),
-  .is-sidebar-collapsed .admin-user > svg {
-    display: none;
-  }
-
-  .is-sidebar-collapsed .admin-theme {
-    display: none;
-  }
-
-  .is-sidebar-collapsed .admin-account-menu {
-    right: auto;
-    bottom: 0;
-    left: 56px;
-    width: 180px;
-  }
-
-  .is-sidebar-collapsed .admin-collapse-button {
-    margin-inline: auto;
-  }
+.admin-back svg,
+.admin-crumb-arrow {
+  width: 15px;
+  height: 15px;
 }
 
-@media (max-width: 900px) {
-  .admin-shell { grid-template-columns: 1fr; }
-  .admin-sidebar {
-    position: fixed;
-    left: 0;
-    width: min(86vw, 288px);
-    transform: translateX(-102%);
-    box-shadow: 18px 0 50px rgba(0, 0, 0, .14);
-    transition: transform .2s ease;
-  }
-  .admin-sidebar.is-open { transform: translateX(0); }
-  .admin-sidebar-close,
-  .admin-menu-button { display: inline-flex; }
-  .admin-collapse-button { display: none; }
-  .admin-back,
-  .admin-crumb-arrow { display: none; }
-  .admin-topbar { height: 66px; padding-inline: 18px; }
-  .admin-main { padding: 28px 18px 48px; }
+.admin-crumb-arrow {
+  color: var(--admin-faint);
 }
 
-@media (max-width: 520px) {
-  .admin-topbar-left > strong { font-size: 12px; }
-  .admin-topbar :deep(.ui-button) { font-size: 12px; }
+.admin-main {
+  width: min(100%, 1400px);
+  min-width: 0;
+  margin-inline: auto;
 }
-</style>
 
-<style>
 html.dark .admin-shell {
   --admin-border: #242b36;
   --admin-bg: #0d1015;
@@ -590,15 +353,17 @@ html.dark .admin-sidebar {
   background: linear-gradient(180deg, #141922 0%, #10141b 100%);
 }
 
+html.dark .admin-sidebar-drawer {
+  background: #12161d;
+}
+
 html.dark .admin-topbar {
   box-shadow: 0 1px 0 rgba(255, 255, 255, .03);
 }
 
-html.dark .admin-nav-group a.active {
-  background: linear-gradient(90deg, rgba(96, 165, 250, .16), rgba(96, 165, 250, .04));
-}
-
-html.dark .admin-nav-group a.active:hover {
-  background: linear-gradient(90deg, rgba(96, 165, 250, .2), rgba(96, 165, 250, .06));
+@media (max-width: 1023px) {
+  .admin-crumb-arrow {
+    display: none;
+  }
 }
 </style>

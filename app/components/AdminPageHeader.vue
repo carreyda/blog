@@ -7,27 +7,31 @@ defineProps<{
 </script>
 
 <template>
-  <header class="admin-page-header">
-    <div>
-      <p v-if="eyebrow" class="admin-eyebrow">{{ eyebrow }}</p>
-      <h1>{{ title }}</h1>
-      <p v-if="description" class="admin-description">{{ description }}</p>
-    </div>
-    <div v-if="$slots.actions" class="admin-page-actions">
+  <UPageHeader
+    :headline="eyebrow"
+    :title="title"
+    :description="description"
+    :ui="{
+      root: 'admin-page-header',
+      headline: 'admin-eyebrow',
+      title: 'admin-page-heading',
+      description: 'admin-description',
+      links: 'admin-page-actions',
+    }"
+  >
+    <template #links>
       <slot name="actions" />
-    </div>
-  </header>
+    </template>
+  </UPageHeader>
 </template>
 
 <style scoped>
 .admin-page-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 24px;
+  padding: 0;
+  border: 0;
 }
 
-.admin-eyebrow {
+.admin-page-header :deep(.admin-eyebrow) {
   margin: 0 0 8px;
   color: var(--color-primary);
   font-size: 11px;
@@ -36,7 +40,7 @@ defineProps<{
   text-transform: uppercase;
 }
 
-h1 {
+.admin-page-header :deep(.admin-page-heading) {
   margin: 0;
   font-size: clamp(24px, 2vw, 30px);
   font-weight: 680;
@@ -44,7 +48,7 @@ h1 {
   line-height: 1.2;
 }
 
-.admin-description {
+.admin-page-header :deep(.admin-description) {
   max-width: 620px;
   margin: 9px 0 0;
   color: var(--color-text-secondary);
@@ -52,7 +56,7 @@ h1 {
   line-height: 1.65;
 }
 
-.admin-page-actions {
+.admin-page-header :deep(.admin-page-actions) {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -61,7 +65,9 @@ h1 {
 }
 
 @media (max-width: 640px) {
-  .admin-page-header { flex-direction: column; }
-  .admin-page-actions { width: 100%; justify-content: flex-start; }
+  .admin-page-header :deep(.admin-page-actions) {
+    width: 100%;
+    justify-content: flex-start;
+  }
 }
 </style>

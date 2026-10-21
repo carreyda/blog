@@ -5,6 +5,7 @@ useSeoMeta({ title: '文章管理' })
 type Post = { id: number; title: string; status: 'PUBLISHED' | 'ARCHIVED'; viewCount: number; publishedAt: string; updatedAt: string; tags: { id: number; name: string }[] }
 const session = useState<{ csrfToken: string } | null>('admin-session')
 const { notifySuccess, notifyError } = useAdminFeedback()
+const { confirm } = useAdminConfirm()
 const deletingId = ref<number | null>(null)
 const search = ref('')
 const status = ref('ALL')
@@ -23,7 +24,8 @@ const formatDate = (value: string) => new Date(value).toLocaleDateString('zh-CN'
 watch([search, status], () => { page.value = 1 })
 
 async function remove(post: Post) {
-  if (!session.value || deletingId.value !== null || !window.confirm(`确定永久删除《${post.title}》吗？删除后无法恢复。`)) return
+  if (!session.value || deletingId.value !== null) return
+  if (!(await confirm({ title: '删除文章', message: `确定永久删除《${post.title}》吗？删除后无法恢复。`, confirmLabel: '删除', color: 'error' }))) return
   deletingId.value = post.id
   try {
     await $fetch(`/api/admin/posts/${post.id}`, { method: 'DELETE', headers: { 'X-CSRF-Token': session.value.csrfToken } })
