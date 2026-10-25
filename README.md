@@ -19,8 +19,9 @@
 ### 管理后台
 
 - 单管理员账号和基于 HttpOnly Cookie 的 Session 鉴权
+- Nuxt UI Dashboard 后台布局：可折叠侧栏、移动端抽屉导航和统一确认弹窗
 - 文章创建、编辑、归档、删除、筛选和搜索
-- Vditor 即时渲染、所见即所得和分屏编辑模式
+- Vditor 编辑器：桌面端分屏编辑、窄屏自动切换即时渲染（IR），支持全屏编辑
 - 标签、项目和网站资料管理
 - 收藏分类与收藏条目管理
 - 文章总数、访问量、热门文章等数据概览
@@ -178,4 +179,5 @@ pm2 startOrReload ecosystem.config.cjs --update-env
 - [产品需求文档](docs/个人博客系统_V2_PRD.md)
 - [优化待办清单](docs/优化待办清单.md)
 - [生产部署指南](docs/DEPLOYMENT.md)
+- [开发约定](CLAUDE.md)
 - [Nginx 配置示例](deploy/nginx-blog.conf.example)

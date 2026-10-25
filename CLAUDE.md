@@ -41,10 +41,16 @@ Then `pnpm db:generate && pnpm db:migrate && pnpm admin:init`.
 
 - `app/` — Nuxt 4 client app: pages, layouts, components, composables, plugins. Public pages use `layouts/default.vue`; `/admin` uses `layouts/admin.vue` (Nuxt UI dashboard shell) and `/admin/login` uses `layouts/admin-auth.vue`.
 - `server/api/` — Nitro file-routed API. `server/api/admin/**` is the admin surface, everything else is public.
-- `server/utils/` — auto-imported Nitro helpers: Prisma singleton, auth/session, markdown rendering, post serializers, settings, validation, rate limiting, `apiError`.
+- `server/utils/` — auto-imported Nitro helpers: Prisma client (production singleton caveat tracked in the TODO doc), auth/session, markdown rendering, post serializers, settings, validation, rate limiting, `apiError`.
 - `shared/schemas/` — Zod schemas shared by client forms and server validation; import as `#shared/schemas/<name>`.
 - `prisma/` — schema and migrations. Prisma 7 uses the `@prisma/adapter-pg` driver adapter; the datasource URL is supplied by `prisma.config.ts`, not `schema.prisma`.
 - `server/routes/` — non-API Nitro routes: `sitemap.xml`, `robots.txt`.
+
+### Admin UI
+
+- `app/layouts/admin.vue` is built from `UDashboardGroup`, `UDashboardSidebar`, `UDashboardPanel`, `UDashboardNavbar` and `UNavigationMenu`. The sidebar collapses on desktop and opens as a slideover on mobile; the component persists size/collapsed state in a cookie.
+- `AdminPageHeader.vue` wraps `UPageHeader`; destructive actions use `AdminConfirmDialog.vue` + `useAdminConfirm` instead of `window.confirm`. Bookmark filters use `USelect`, and empty states use `UEmpty`.
+- The dashboard and post-list tables are still native `<table>` elements; migrating them to `UTable` is tracked in `docs/优化待办清单.md`.
 
 ### Auth and the admin boundary
 
@@ -64,7 +70,7 @@ Then `pnpm db:generate && pnpm db:migrate && pnpm admin:init`.
   - `adminPostSelect` + `serializeAdminPost` — includes `contentMarkdown` and SEO fields.
 - List endpoints return `{ data: { items, total, page, pageSize } }`; page size is clamped (10 public, 20 admin, max 50).
 - Singleton rows: `SiteSetting` (id 1, JSON `SiteSettingValue`) with `defaultSettings` fallback, and `SiteStats` (id 1, `totalViews`). Settings updates replace the whole JSON value after Zod validation.
-- `BookmarkCategory` is a self-referencing tree (two intended levels). The public endpoint builds the tree from flat rows and prunes empty branches; admin endpoints enforce parent existence and sibling-name uniqueness.
+- `BookmarkCategory` is a self-referencing tree supporting arbitrary depth. The public endpoint builds the tree from flat rows and prunes empty branches; admin endpoints enforce parent existence and sibling-name uniqueness.
 - `Tag.slug` is explicit user input (lowercase letters/digits/hyphens), not auto-derived.
 - View counting is client-driven: `app/plugins/views.client.ts` POSTs `/api/views` on `page:finish` for every non-admin page, including a `postId` on `/blog/:id`. The endpoint transactionally increments `SiteStats.totalViews` and `Post.viewCount`.
 
@@ -72,12 +78,12 @@ Then `pnpm db:generate && pnpm db:migrate && pnpm admin:init`.
 
 - `server/utils/markdown.ts` is the single renderer: markdown-it → Shiki (`github-dark`) → `sanitize-html` allowlist. It injects stable heading IDs, builds the `toc` returned to article/about pages, and emits Mermaid fences as `<pre class="language-mermaid">`.
 - Client-side `app/plugins/markdown-enhancements.client.ts` adds copy buttons and loads Mermaid from `/vendor/vditor/...`, re-rendering diagrams when color mode changes.
-- The admin editor is `MarkdownEditor.client.vue` (Vditor, lazily imported by the admin layout) and is served from `public/vendor/vditor`, which is copied out of `node_modules` by `scripts/copy-vditor-assets.mjs` via the `predev`/`prebuild` hooks. That directory is gitignored — a fresh clone without a dev/build run will 404 the editor assets.
+- The admin editor is `MarkdownEditor.client.vue` (Vditor, lazily imported by the admin layout) and is served from `public/vendor/vditor`, which is copied out of `node_modules` by `scripts/copy-vditor-assets.mjs` via the `predev`/`prebuild` hooks. That directory is gitignored — a fresh clone without a dev/build run will 404 the editor assets. Above 720px it uses Vditor split view; at 720px or below it switches to instant rendering (IR), and it exposes a fullscreen toggle that syncs with the page button.
 
 ### Styling
 
 - `app/assets/css/main.css` imports Tailwind v4 and Nuxt UI, defines the brand palette in `@theme`, and exposes the public site's CSS variables (`--color-*`, `--radius-*`). Public pages use scoped CSS and a monospace aesthetic.
-- Admin styling is scoped in `app/layouts/admin.vue` using `--admin-*` variables with explicit `html.dark` overrides.
+- Admin styling combines Nuxt UI dashboard components with `--admin-*` variables defined in `app/layouts/admin.vue` and explicit `html.dark` overrides.
 - Color mode is the three-state `system | light | dark` switcher (`ColorModeSwitcher.vue`); public pages and admin both react to it.
 
 ### Deployment
