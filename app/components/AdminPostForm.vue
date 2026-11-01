@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { ADMIN_MEDIA_ACCEPT, isSupportedMediaFile } from '~/composables/useAdminMedia'
+
 type Tag = { id: number; name: string; slug: string; postCount: number }
 type Post = {
   id: number
@@ -14,7 +16,12 @@ type Post = {
 
 const props = defineProps<{ post?: Post }>()
 const { notifySuccess, notifyError } = useAdminFeedback()
+const { addFiles } = useAdminMedia()
 const session = useState<{ csrfToken: string } | null>('admin-session')
+const imageInput = useTemplateRef<HTMLInputElement>('imageInput')
+const coverInput = useTemplateRef<HTMLInputElement>('coverInput')
+const uploadingImages = ref(false)
+const uploadingCover = ref(false)
 const editor = useTemplateRef<{
   insertImage: (url: string, description: string) => void
   toggleFullscreen: () => void
@@ -52,21 +59,78 @@ async function save(status = form.status) {
   } finally { pending.value = false }
 }
 
-function insertImage() {
-  const input = window.prompt('图片地址（仅支持 http/https）')
-  if (input === null) return
-  const url = input.trim()
-  if (!url || !/^https?:\/\//i.test(url)) {
-    notifyError(new Error('请输入有效的 http/https 图片地址。'), '插入图片失败')
+function pickImages(): void {
+  imageInput.value?.click()
+}
+
+function baseName(name: string): string {
+  return name.replace(/\.[^.]+$/, '')
+}
+
+async function uploadAndInsert(files: File[]): Promise<void> {
+  if (!files.length) return
+
+  const supported = files.filter(isSupportedMediaFile)
+  if (!supported.length) {
+    notifyError(new Error('仅支持 PNG / JPG / WebP / GIF / AVIF，且单张不超过 10MB'), '没有可上传的图片')
     return
   }
-  if (!editor.value) {
-    notifyError(new Error('请等待 Markdown 编辑器加载完成后重试。'), '插入图片失败')
+
+  uploadingImages.value = true
+  try {
+    const { added, rejected } = await addFiles(supported)
+    for (const item of added) editor.value?.insertImage(item.url, baseName(item.name))
+    if (added.length) notifySuccess(`已插入 ${added.length} 张图片`)
+    if (rejected.length) notifyError(new Error(`${rejected.length} 张图片未通过校验`), '部分图片未上传')
+  }
+  catch (error) {
+    notifyError(error, '图片上传失败')
+  }
+  finally {
+    uploadingImages.value = false
+  }
+}
+
+function onImagesPicked(event: Event): void {
+  const input = event.target as HTMLInputElement
+  void uploadAndInsert(Array.from(input.files ?? []))
+  input.value = ''
+}
+
+function pickCover(): void {
+  coverInput.value?.click()
+}
+
+async function uploadCover(file: File): Promise<void> {
+  if (!isSupportedMediaFile(file)) {
+    notifyError(new Error('仅支持 PNG / JPG / WebP / GIF / AVIF，且单张不超过 10MB'), '封面格式不支持')
     return
   }
-  const description = window.prompt('图片描述')?.trim() || '图片'
-  editor.value.insertImage(url, description)
-  notifySuccess('图片已插入')
+
+  uploadingCover.value = true
+  try {
+    const { added } = await addFiles([file])
+    const cover = added[0]
+    if (!cover) {
+      notifyError(new Error('封面保存失败，请稍后重试'), '上传封面失败')
+      return
+    }
+    form.coverImageUrl = cover.url
+    notifySuccess('封面已更新')
+  }
+  catch (error) {
+    notifyError(error, '上传封面失败')
+  }
+  finally {
+    uploadingCover.value = false
+  }
+}
+
+function onCoverPicked(event: Event): void {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (file) void uploadCover(file)
 }
 
 function toggleFullscreen() {
@@ -90,6 +154,21 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
 
 <template>
   <form class="post-form" @submit.prevent="save()">
+    <input
+      ref="imageInput"
+      type="file"
+      class="hidden-input"
+      :accept="ADMIN_MEDIA_ACCEPT"
+      multiple
+      @change="onImagesPicked"
+    >
+    <input
+      ref="coverInput"
+      type="file"
+      class="hidden-input"
+      :accept="ADMIN_MEDIA_ACCEPT"
+      @change="onCoverPicked"
+    >
     <main class="post-editor-column">
       <UCard class="content-card">
         <template #header>
@@ -107,7 +186,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
             <div><strong>Markdown 正文</strong><span>{{ wordCount }} 字 · 约 {{ readingTime }} 分钟阅读</span></div>
             <div class="editor-actions">
               <UButton type="button" size="sm" color="neutral" variant="soft" :icon="isFullscreen ? 'i-lucide-minimize-2' : 'i-lucide-maximize-2'" @click="toggleFullscreen">{{ isFullscreen ? '退出全屏' : '全屏编辑' }}</UButton>
-              <UButton type="button" size="sm" color="neutral" variant="soft" icon="i-lucide-image-plus" @click="insertImage">插入图片</UButton>
+              <UButton type="button" size="sm" color="neutral" variant="soft" icon="i-lucide-image-plus" :loading="uploadingImages" @click="pickImages">上传图片</UButton>
             </div>
           </div>
         </template>
@@ -141,7 +220,12 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
       <UCard>
         <template #header><div class="side-heading"><span>封面与 SEO</span><UIcon name="i-lucide-sparkles" /></div></template>
         <div class="option-stack">
-          <UFormField label="封面 URL"><UInput v-model="form.coverImageUrl" type="url" class="w-full" placeholder="https://..." /></UFormField>
+          <UFormField label="封面 URL">
+            <div class="cover-field">
+              <UInput v-model="form.coverImageUrl" type="url" class="w-full" placeholder="https://..." />
+              <UButton type="button" color="neutral" variant="soft" :loading="uploadingCover" icon="i-lucide-upload" @click="pickCover">上传</UButton>
+            </div>
+          </UFormField>
           <div v-if="form.coverImageUrl" class="cover-preview"><img :src="form.coverImageUrl" alt="文章封面预览"></div>
           <UFormField label="SEO 标题"><UInput v-model="form.seoTitle" maxlength="200" class="w-full" /><template #hint>{{ form.seoTitle.length }}/200</template></UFormField>
           <UFormField label="SEO 描述"><UTextarea v-model="form.seoDescription" maxlength="500" :rows="4" class="w-full" /><template #hint>{{ form.seoDescription.length }}/500</template></UFormField>
@@ -352,6 +436,20 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.cover-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cover-field :deep(input) {
+  min-width: 0;
+}
+
+.hidden-input {
+  display: none;
 }
 
 @keyframes spin {

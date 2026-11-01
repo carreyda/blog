@@ -62,6 +62,7 @@ Nuxt Nitro  POST /api/admin/uploads        （管理员会话 + CSRF 校验）
 - [x] Step 6 配置本地 / 服务器环境变量（本地 `.env` 已完成；服务器待 Step 9）
 - [x] Step 7 代码接入（我负责，已完成，见 §7）
 - [x] Step 8 端到端联调验证（本地自动化已通过，见 §8.4；生产人工验证待上线后）
+- [x] 文章编辑器 / 封面上传接入（2026-11-01 完成，复用 `/api/admin/uploads`，见 §7.7）
 - [ ] Step 9 上线、安全加固与成本告警
 
 ---
@@ -77,7 +78,7 @@ Nuxt Nitro  POST /api/admin/uploads        （管理员会话 + CSRF 校验）
 | 删除 | 仅本地移除 | 删 COS 对象 + 删记录 | `DELETE /api/admin/media/:id` |
 | 重命名 | 无 | 只改显示名称，COS 地址不变 | `PATCH /api/admin/media/:id` |
 | 跨设备/刷新 | 不支持 | 支持 | 数据库（Neon 无关，已用 PostgreSQL） |
-| 编辑器/封面 | 无（仍是手填 URL） | 后续可复用本模块（不在本次范围） | `AdminPostForm.vue`、`MarkdownEditor.client.vue`（下一阶段） |
+| 编辑器/封面 | 无（手填 URL / 弹窗输入） | 已接入：编辑器工具栏上传、粘贴/拖拽、封面上传，复用本模块接口 | `AdminPostForm.vue`、`MarkdownEditor.client.vue` |
 
 ---
 
@@ -386,6 +387,8 @@ pm2 logs personal-blog --lines 30 --nostream
 | `app/composables/useAdminMedia.ts` | 从 mock 切换为真实接口，保留类型与工具函数 | ✅ 已完成 |
 | `app/components/AdminImageUploader.client.vue` | 真实提交（上传弹窗内可逐文件修改显示名称） | ✅ 已完成 |
 | `app/components/AdminMediaLibrary.vue` | 加载/失败/空状态、真实分页与删除、上传前改名 + 上传后重命名 | ✅ 已完成 |
+| `app/components/MarkdownEditor.client.vue` | Vditor `upload` 适配（工具栏上传、粘贴/拖拽、CSRF、错误提示） | ✅ 已完成 |
+| `app/components/AdminPostForm.vue` | 「上传图片」按钮 + 封面上传，插入 Markdown / 回填封面 URL | ✅ 已完成 |
 | `deploy/nginx-blog.conf.example` | `client_max_body_size 30m;`、`proxy_read_timeout 120s;` | ✅ 已完成 |
 | `docs/DEPLOYMENT.md` | 环境变量表与 COS 排障小节 | ✅ 已完成 |
 
@@ -477,6 +480,7 @@ model MediaAsset {
 - ✅ 本地真实 COS 上传 1 张图，返回 URL 可直接访问，`HeadObject` 200。
 - ✅ 真实接口冒烟测试 19/19 通过（上传/列表/代理读取/删除/鉴权/类型校验）。
 - ✅ 重命名功能通过无头浏览器验证 12/12：上传前改名（含中文名）、上传后改名、刷新持久化、改名前后 URL 完全一致。
+- ✅ 编辑器/封面上传通过无头浏览器验证：Vditor 工具栏上传 201，Markdown 自动插入 COS 链接；`AdminPostForm` 上传按钮与封面上传均 201 且回填正确，无控制台错误。
 
 #### 7.6 其它实现说明
 
@@ -485,6 +489,17 @@ model MediaAsset {
 - **兼容**：`image-size@2.0.4` 支持 APNG/AVIF/WebP/GIF/HEIF 等，尺寸解析失败时回退为 `0×0`，不阻塞上传。
 - **重命名**：上传弹窗内可逐文件修改名称（上传前改名）；上传后可在卡片 hover、列表行、预览弹窗中重命名。两者都只改数据库 `MediaAsset.name` 与下载文件名，**不会移动或重命名 COS 对象**，已插入文章/站外的链接保持不变。服务端会清洗路径分隔符与非法字符，最长 255 字符。
 - **上传进度**：当前为「提交 → toast」，暂无字节级进度条；大文件排队上传属后续可选增强。
+
+#### 7.7 文章编辑器与封面上传（2026-11-01 追加）
+
+复用 `POST /api/admin/uploads`，未新增后端接口：
+
+- **编辑器工具栏**：`MarkdownEditor.client.vue` 的 Vditor `upload` 配置指向 `/api/admin/uploads`，`fieldName: 'file'`、`multiple`、`max: 10MB`、`accept` 同图库白名单、`setHeaders` 注入 `X-CSRF-Token`；Vditor 自带的上传按钮、粘贴图片、拖拽图片都会走同一适配器。
+- **响应适配**：Vditor 要求 `{ code, msg, data: { errFiles, succMap } }`，用 `format(files, responseText)` 把本接口的 `{ data: { files: [...] } }` 转成 `succMap`，Vditor 会自动在光标处插入 `![名称](COS_URL)`；失败时 `error(responseText)` 解析 `{ error: { message } }` 并用 `tip` 提示。
+- **编辑器卡片按钮**：`AdminPostForm.vue` 顶部「上传图片」按钮选择文件 → `useAdminMedia().addFiles()` 上传 → 逐张插入 `![名称](URL)`；不再使用 `window.prompt` 填 URL。
+- **封面上传**：封面 URL 输入框旁新增「上传」按钮，选择图片后上传并回填 `form.coverImageUrl`；也可继续手动粘贴任意 http(s) URL。
+- **命名**：Vditor 插入的图片说明使用完整文件名（含扩展名），「上传图片」按钮插入的说明去掉扩展名；两者都只影响 Markdown 说明文字。
+- **限制**：与图库共用 10MB/张、PNG/JPEG/WebP/GIF/AVIF 校验；超过限制时前端 toast / Vditor tip 提示。
 
 ---
 
@@ -512,6 +527,9 @@ model MediaAsset {
 | 10 | 文章/站外场景 | 把 COS 图片 URL 填到文章 Markdown 中，前台正常显示 | 文章页截图 |
 | 11 | 上传弹窗内把文件名改为中文/其他名称 | 加入图片库后卡片显示新名称 | 上传弹窗（已改名）+ 列表 |
 | 12 | 卡片 hover → 重命名 → 保存 | 卡片与预览标题更新；复制的链接不变 | 重命名弹窗 + 前后链接对比 |
+| 13 | 文章编辑器工具栏上传（或 Vditor 自带上传按钮） | 返回 201，光标处自动插入 `![](COS_URL)`，右侧预览出现图片 | 编辑器 + 右侧预览 |
+| 14 | 在编辑器内粘贴或拖拽图片 | 同上（走同一 Vditor upload 适配） | 编辑器插入结果 |
+| 15 | 新建/编辑文章页封面「上传」 | 上传成功，封面 URL 自动回填 COS 地址 | 封面区域截图 |
 
 #### 8.3 上线后的生产验证
 
@@ -548,6 +566,15 @@ model MediaAsset {
 | 9 | 上传后改名：卡片 hover → 重命名 → `图片3.png` | PATCH 200；卡片与预览标题同步更新 |
 | 10 | 对比改名前后 COS URL | 完全一致（COS 对象未移动） |
 | 11 | 刷新页面 | 仍显示 `图片3.png`（数据库持久化） |
+
+**编辑器 / 封面上传（2026-11-01 追加）**
+
+| # | 操作 | 结果 |
+| --- | --- | --- |
+| 1 | Vditor 工具栏上传 PNG | 201；编辑器插入 `![编辑器测试图.png](https://carreyda-.../images/2026/11/<uuid>.png)`；右侧预览图渲染 |
+| 2 | 编辑器卡片「上传图片」按钮 | 201；插入 `![表单上传图](...)` |
+| 3 | 封面上传 | 201；封面 URL 回填 COS 地址 |
+| 4 | 清理 | API 删除 3 条记录均 204，图库归零；无控制台错误 |
 
 > 注：验证产生的图片、COS 对象和临时登录会话均已清理，本地数据库 `MediaAsset` 为空，桶内 `images/` 无残留测试对象。重命名专项 E2E 12/12 通过，无浏览器控制台错误。
 
