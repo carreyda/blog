@@ -1,6 +1,8 @@
 server {
     listen 80;
     server_name example.com www.example.com;
+    # 管理后台上传图片总大小上限 25MB，这里留出表单开销余量
+    client_max_body_size 30m;
     location / {
         proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
@@ -8,6 +10,7 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 120s;
     }
     location = /api/health { proxy_pass http://127.0.0.1:3000/api/health; access_log off; }
 }

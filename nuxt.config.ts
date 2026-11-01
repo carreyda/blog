@@ -70,6 +70,13 @@ export default defineNuxtConfig({
   runtimeConfig: {
     databaseUrl: process.env.DATABASE_URL || '',
     sessionSecret: process.env.SESSION_SECRET || '',
+    cos: {
+      secretId: process.env.NUXT_COS_SECRET_ID || '',
+      secretKey: process.env.NUXT_COS_SECRET_KEY || '',
+      bucket: process.env.NUXT_COS_BUCKET || '',
+      region: process.env.NUXT_COS_REGION || 'ap-guangzhou',
+      publicBaseUrl: process.env.NUXT_COS_PUBLIC_BASE_URL || '',
+    },
     public: {
       siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000',
     },

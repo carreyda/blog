@@ -216,6 +216,11 @@ git log -1 --oneline
 | `DATABASE_URL` | Prisma 连接 PostgreSQL 的地址 |
 | `SESSION_SECRET` | 管理员会话签名密钥，至少 32 个随机字节 |
 | `NUXT_PUBLIC_SITE_URL` | 网站公网根地址，用于 SEO 和站点地图 |
+| `NUXT_COS_SECRET_ID` | 腾讯云 COS 子账号 SecretId（仅用于图片上传） |
+| `NUXT_COS_SECRET_KEY` | 腾讯云 COS 子账号 SecretKey |
+| `NUXT_COS_BUCKET` | 存储桶名称，如 `carreyda-1301428252` |
+| `NUXT_COS_REGION` | 存储桶地域，如 `ap-shanghai` |
+| `NUXT_COS_PUBLIC_BASE_URL` | 图片访问域名，如 `https://<bucket>.cos.ap-shanghai.myqcloud.com` |
 
 在服务器项目目录执行：
 
@@ -228,6 +233,11 @@ cat > .env <<EOF
 DATABASE_URL="postgresql://blog_app:${DB_PASSWORD}@127.0.0.1:5432/blog_prod?schema=public"
 SESSION_SECRET="${SESSION_SECRET}"
 NUXT_PUBLIC_SITE_URL="http://<SERVER_IP>"
+NUXT_COS_SECRET_ID="<COS_SECRET_ID>"
+NUXT_COS_SECRET_KEY="<COS_SECRET_KEY>"
+NUXT_COS_BUCKET="<BUCKET>"
+NUXT_COS_REGION="ap-shanghai"
+NUXT_COS_PUBLIC_BASE_URL="https://<BUCKET>.cos.ap-shanghai.myqcloud.com"
 EOF
 unset DB_PASSWORD SESSION_SECRET
 chmod 600 .env
@@ -237,6 +247,7 @@ chmod 600 .env
 - `openssl rand` 生成随机会话密钥。
 - `unset` 清除 shell 中的临时敏感变量。
 - `chmod 600` 仅允许文件所有者读写。
+- COS 密钥使用只授权 `images/*` 的 CAM 子账号，见 `docs/腾讯云COS图片上传接入指南.md`；未配置 COS 时管理后台的图片上传会返回 503，但文章、标签等其它功能不受影响。
 
 数据库密码若包含 `@`、`:`、`/`、`#` 等 URI 特殊字符，必须 URL 编码。只检查变量名和权限，不显示值：
 
@@ -245,7 +256,7 @@ grep -E '^[A-Z_]+=' .env | cut -d= -f1
 stat -c '%a %n' .env
 ```
 
-预期看到三个变量名和 `600 .env`。不要 `cat .env`，不要截图或提交它。
+预期看到八个变量名和 `600 .env`。不要 `cat .env`，不要截图或提交它。
 
 ## 10. 首次安装、迁移和构建
 
@@ -339,7 +350,9 @@ server {
     listen 80 default_server;
     listen [::]:80 default_server;
     server_name _;
-    client_max_body_size 10m;
+    # 管理后台图片上传一次最多 25MB，Nginx 需要给出比默认 1MB 更大的上限
+    client_max_body_size 30m;
+    proxy_read_timeout 120s;
 
     location / {
         proxy_pass http://127.0.0.1:3000;

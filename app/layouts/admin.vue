@@ -36,6 +36,7 @@ const contentNav: NavItem[] = [
 ]
 
 const settingsNav: NavItem[] = [
+  { label: '图片上传', to: '/admin/media', icon: 'i-lucide-images' },
   { label: '网站设置', to: '/admin/settings', icon: 'i-lucide-settings' },
 ]
 

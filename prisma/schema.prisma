@@ -22,6 +22,14 @@ enum ProjectStatus {
   BUILDING
 }
 
+enum MediaFormat {
+  PNG
+  JPG
+  WEBP
+  GIF
+  AVIF
+}
+
 model User {
   id           Int       @id @default(autoincrement())
   username     String    @unique @db.VarChar(50)
@@ -144,4 +152,19 @@ model Bookmark {
 
   @@index([categoryId, sort])
   @@index([isVisible, sort])
+}
+
+model MediaAsset {
+  id        Int         @id @default(autoincrement())
+  name      String      @db.VarChar(255)
+  cosKey    String      @unique @db.VarChar(512)
+  url       String      @db.VarChar(2048)
+  width     Int
+  height    Int
+  bytes     Int
+  format    MediaFormat
+  createdAt DateTime    @default(now())
+
+  @@index([createdAt])
+  @@index([format, createdAt])
 }
