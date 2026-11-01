@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 definePageMeta({ layout: 'admin' })
 useSeoMeta({ title: '标签管理' })
 
@@ -61,7 +61,7 @@ async function remove(tag: Tag) {
 
 <template>
   <section class="tags-page">
-    <AdminPageHeader eyebrow="Content" title="标签管理" description="组织文章内容，并维护公开标签链接。" />
+    <AdminPageHeader title="标签管理" description="组织文章内容，并维护公开标签链接。" />
 
     <div class="tags-layout">
       <UCard class="form-card">
@@ -92,7 +92,7 @@ async function remove(tag: Tag) {
 </template>
 
 <style scoped>
-.tags-page { display: grid; gap: 26px; }
+.tags-page { display: grid; gap: 12px; }
 .tags-layout { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 18px; align-items: start; }
 .form-card { position: sticky; top: 86px; }
 .card-title { display: flex; align-items: center; gap: 11px; }

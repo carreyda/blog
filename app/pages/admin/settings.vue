@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 type SiteSettings = {
   siteName: string
   personName: string
@@ -50,7 +50,7 @@ async function save() {
 
 <template>
   <section class="settings-page">
-    <AdminPageHeader eyebrow="系统配置" title="网站设置" description="管理博客的基础资料、首页内容与默认搜索展示信息。" />
+    <AdminPageHeader title="网站设置" description="管理博客的基础资料、首页内容与默认搜索展示信息。" />
     <form class="settings-form" @submit.prevent="save">
       <div class="settings-main">
         <UCard class="settings-card">

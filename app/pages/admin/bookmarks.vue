@@ -273,7 +273,7 @@ function markIconBroken(id: number) {
 
 <template>
   <section class="bookmarks-admin-page">
-    <AdminPageHeader eyebrow="Resources" title="收藏管理" description="维护多级分类与公开展示的网站收藏。" />
+    <AdminPageHeader title="收藏管理" description="维护多级分类与公开展示的网站收藏。" />
 
     <div class="workspace-grid">
       <UCard class="category-card">
@@ -386,7 +386,7 @@ function markIconBroken(id: number) {
 <style scoped>
 .bookmarks-admin-page {
   display: grid;
-  gap: 26px;
+  gap: 12px;
 }
 
 .workspace-grid {

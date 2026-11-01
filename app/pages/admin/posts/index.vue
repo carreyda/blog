@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 definePageMeta({ layout: 'admin' })
 useSeoMeta({ title: '文章管理' })
 
@@ -41,19 +41,19 @@ async function remove(post: Post) {
 
 <template>
   <section class="posts-page">
-    <AdminPageHeader eyebrow="Content" title="文章管理" :description="`管理博客中的全部内容，共 ${total} 篇文章。`">
+    <AdminPageHeader title="文章管理" :description="`管理博客中的全部内容，共 ${total} 篇文章。`">
       <template #actions><UButton to="/admin/posts/new" icon="i-lucide-plus" size="sm">新建文章</UButton></template>
     </AdminPageHeader>
 
-    <UCard class="toolbar-card">
+    <section class="panel toolbar-panel">
       <div class="toolbar">
         <UInput v-model="search" icon="i-lucide-search" placeholder="搜索文章标题…" class="search-input" />
         <USelect v-model="status" :items="statusItems" value-key="value" class="status-select" />
         <span class="result-count">{{ total }} 条结果</span>
       </div>
-    </UCard>
+    </section>
 
-    <UCard class="table-card">
+    <section class="panel table-panel">
       <div v-if="pending" class="loading-list">
         <USkeleton v-for="index in 6" :key="index" class="h-14 w-full" />
       </div>
@@ -74,7 +74,7 @@ async function remove(post: Post) {
               </td>
               <td><UBadge :color="post.status === 'PUBLISHED' ? 'success' : 'neutral'" variant="subtle" size="sm">{{ post.status === 'PUBLISHED' ? '已发布' : '已归档' }}</UBadge></td>
               <td><span class="metric"><UIcon name="i-lucide-eye" />{{ post.viewCount.toLocaleString('zh-CN') }}</span></td>
-              <td>{{ formatDate(post.updatedAt) }}</td>
+              <td class="cell-time">{{ formatDate(post.updatedAt) }}</td>
               <td>
                 <div class="row-actions">
                   <UButton :to="`/admin/posts/${post.id}/edit`" icon="i-lucide-pencil" color="neutral" variant="ghost" square size="xs" :aria-label="`编辑 ${post.title}`" />
@@ -85,39 +85,45 @@ async function remove(post: Post) {
           </tbody>
         </table>
       </div>
-    </UCard>
+    </section>
 
     <div v-if="total > 20" class="pagination"><UPagination v-model:page="page" :total="total" :items-per-page="20" /></div>
   </section>
 </template>
 
 <style scoped>
-.posts-page { display: grid; gap: 22px; }
-.toolbar-card { overflow: visible; }
+.posts-page { display: grid; gap: 12px; }
+
+.panel { overflow: hidden; border: 1px solid var(--admin-border); border-radius: var(--admin-radius); background: var(--admin-surface); }
+.toolbar-panel { padding: 12px 14px; }
 .toolbar { display: flex; align-items: center; gap: 10px; }
 .search-input { width: min(100%, 360px); }
-.status-select { width: 132px; }
-.result-count { margin-left: auto; color: var(--color-text-muted); font-size: 11.5px; white-space: nowrap; }
-.table-card { overflow: hidden; }
+.status-select { width: 136px; }
+.result-count { margin-left: auto; color: var(--admin-muted); font-size: 11.5px; white-space: nowrap; }
+
 .table-scroll { width: 100%; overflow-x: auto; }
 table { width: 100%; min-width: 760px; border-collapse: collapse; }
-th { padding: 0 14px 12px; color: var(--color-text-muted); font-size: 10.5px; font-weight: 600; text-align: left; }
+th { padding: 9px 16px; border-bottom: 1px solid var(--admin-border); color: var(--admin-muted); font-size: 11px; font-weight: 600; text-align: left; white-space: nowrap; }
 th:last-child { width: 76px; }
-td { padding: 15px 14px; border-top: 1px solid var(--color-border); color: var(--color-text-secondary); font-size: 11.5px; vertical-align: middle; white-space: nowrap; }
+td { padding: 11px 16px; border-bottom: 1px solid var(--admin-border); color: var(--admin-body); font-size: 12.5px; vertical-align: middle; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover { background: var(--admin-hover); }
 td:first-child { width: 100%; white-space: normal; }
-.post-title { color: var(--color-text); font-size: 13px; font-weight: 620; line-height: 1.4; }
-.post-title:hover { color: var(--color-primary); }
-.post-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
-.post-tags span { color: var(--color-text-muted); font-size: 10.5px; }
-.metric { display: inline-flex; align-items: center; gap: 6px; }
-.metric :deep(svg) { width: 13px; height: 13px; }
+.cell-time { color: var(--admin-muted); }
+.post-title { color: var(--admin-text); font-size: 13px; font-weight: 600; line-height: 1.4; text-decoration: none; }
+.post-title:hover { color: var(--admin-accent-text); }
+.post-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
+.post-tags span { color: var(--admin-faint); font-size: 11px; }
+.metric { display: inline-flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; }
+.metric :deep(svg) { width: 13px; height: 13px; color: var(--admin-faint); }
 .row-actions { display: flex; justify-content: flex-end; gap: 2px; }
-.loading-list { display: grid; gap: 8px; padding: 6px 0; }
-.empty-state { display: grid; min-height: 360px; place-items: center; align-content: center; gap: 9px; text-align: center; }
-.empty-state>span { display: grid; width: 46px; height: 46px; margin-bottom: 4px; place-items: center; border-radius: 12px; background: var(--color-background-secondary); color: var(--color-text-muted); }
-.empty-state>span :deep(svg) { width: 21px; height: 21px; }
-.empty-state strong { font-size: 13px; }
-.empty-state p { margin: 0 0 5px; color: var(--color-text-muted); font-size: 11.5px; }
+
+.loading-list { display: grid; gap: 8px; padding: 14px; }
+.empty-state { display: grid; min-height: 320px; place-items: center; align-content: center; gap: 9px; text-align: center; }
+.empty-state>span { display: grid; width: 44px; height: 44px; margin-bottom: 4px; place-items: center; border: 1px solid var(--admin-border); border-radius: 10px; color: var(--admin-muted); }
+.empty-state>span :deep(svg) { width: 20px; height: 20px; }
+.empty-state strong { color: var(--admin-text); font-size: 13px; }
+.empty-state p { margin: 0 0 5px; color: var(--admin-muted); font-size: 11.5px; }
 .pagination { display: flex; justify-content: flex-end; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
 

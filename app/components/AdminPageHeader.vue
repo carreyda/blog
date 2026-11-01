@@ -32,28 +32,29 @@ defineProps<{
 }
 
 .admin-page-header :deep(.admin-eyebrow) {
-  margin: 0 0 8px;
-  color: var(--color-primary);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .12em;
+  margin: 0 0 5px;
+  color: var(--admin-accent-text, var(--color-primary));
+  font-size: 10.5px;
+  font-weight: 680;
+  letter-spacing: .11em;
   text-transform: uppercase;
 }
 
 .admin-page-header :deep(.admin-page-heading) {
   margin: 0;
-  font-size: clamp(24px, 2vw, 30px);
+  color: var(--admin-text, var(--color-text));
+  font-size: 20px;
   font-weight: 680;
-  letter-spacing: -.035em;
-  line-height: 1.2;
+  letter-spacing: -.02em;
+  line-height: 1.25;
 }
 
 .admin-page-header :deep(.admin-description) {
-  max-width: 620px;
-  margin: 9px 0 0;
-  color: var(--color-text-secondary);
-  font-size: 13px;
-  line-height: 1.65;
+  max-width: 640px;
+  margin: 5px 0 0;
+  color: var(--admin-muted, var(--color-text-secondary));
+  font-size: 12.5px;
+  line-height: 1.6;
 }
 
 .admin-page-header :deep(.admin-page-actions) {
@@ -61,7 +62,7 @@ defineProps<{
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
-  gap: 10px;
+  gap: 8px;
 }
 
 @media (max-width: 640px) {

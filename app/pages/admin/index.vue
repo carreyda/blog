@@ -7,284 +7,417 @@ type Overview = { totalPosts: number; publishedPosts: number; totalViews: number
 
 const session = useState<{ user: { username: string } } | null>('admin-session')
 const { data: response } = await useFetch<{ data: Overview }>('/api/admin/analytics/overview')
+
 const data = computed<Overview>(() => response.value?.data || { totalPosts: 0, publishedPosts: 0, totalViews: 0, topPosts: [], recentPosts: [] })
+
 const displayName = computed(() => session.value?.user.username || 'Carreyda')
 const hour = Number(new Intl.DateTimeFormat('zh-CN', { hour: '2-digit', hour12: false, timeZone: 'Asia/Shanghai' }).format(new Date()))
 const greeting = hour < 6 ? '夜深了' : hour < 12 ? '上午好' : hour < 18 ? '下午好' : '晚上好'
+
+const drafts = computed(() => Math.max(0, data.value.totalPosts - data.value.publishedPosts))
+const publishRate = computed(() => (data.value.totalPosts ? Math.round((data.value.publishedPosts / data.value.totalPosts) * 100) : 0))
+const draftRate = computed(() => (data.value.totalPosts ? Math.round((drafts.value / data.value.totalPosts) * 100) : 0))
+const avgViews = computed(() => (data.value.totalPosts ? Math.round(data.value.totalViews / data.value.totalPosts) : 0))
+const topFiveViews = computed(() => data.value.topPosts.slice(0, 5).reduce((sum, post) => sum + (post.viewCount || 0), 0))
+const topFiveShare = computed(() => (data.value.totalViews ? Math.round((topFiveViews.value / data.value.totalViews) * 100) : 0))
+
 const formatNumber = (value: number) => new Intl.NumberFormat('zh-CN').format(value)
-const formatDate = (value?: string) => value ? new Date(value).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) : '—'
+const formatDate = (value?: string) =>
+  value ? new Date(value).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) : '—'
+
 const formatRecentDate = (value?: string) => {
   if (!value) return '—'
   const date = new Date(value)
   const today = new Date()
   const time = date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })
-  if (date.toDateString() === today.toDateString()) return time
+  if (date.toDateString() === today.toDateString()) return `今天 ${time}`
   const yesterday = new Date(today)
   yesterday.setDate(today.getDate() - 1)
   if (date.toDateString() === yesterday.toDateString()) return `昨天 ${time}`
   return date.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false })
 }
+
+const lastUpdatedCaption = computed(() => {
+  const latest = data.value.recentPosts[0]?.updatedAt
+  return latest ? `最近更新于 ${formatRecentDate(latest)}` : '还没有更新记录'
+})
+
+/* The analytics endpoint has no per-day series, so the trend panel renders a
+   shape scaled to real traffic and is badged as 演示数据 instead of faking a feed. */
+const DEMO_WEIGHTS = [0.72, 0.88, 0.66, 1.06, 1.34, 1.18, 1.46]
+const demoSeries = computed(() => {
+  const base = Math.max(6, Math.round((data.value.totalViews || 0) / 26))
+  return DEMO_WEIGHTS.map(weight => Math.max(2, Math.round(base * weight)))
+})
+
+const WEEKDAYS = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+
+function niceStep(value: number) {
+  if (value <= 1) return 1
+  const magnitude = 10 ** Math.floor(Math.log10(value))
+  const normalized = value / magnitude
+  const step = normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10
+  return step * magnitude
+}
+
+const chart = computed(() => {
+  const width = 720
+  const height = 232
+  const left = 44
+  const right = 10
+  const top = 16
+  const bottom = 28
+
+  const series = demoSeries.value
+  const unit = niceStep(Math.max(...series) / 3)
+  const scaleMax = unit * 3
+  const innerWidth = width - left - right
+  const innerHeight = height - top - bottom
+  const stepX = innerWidth / Math.max(1, series.length - 1)
+
+  const points = series.map((value, index) => ({
+    value,
+    x: Math.round((left + index * stepX) * 10) / 10,
+    y: Math.round((top + innerHeight - (value / scaleMax) * innerHeight) * 10) / 10,
+  }))
+
+  const first = points[0]
+  const last = points[points.length - 1]
+  const line = first && last
+    ? `M ${first.x} ${first.y} ` + points.slice(1).map((point, index) => {
+        const previous = points[index] ?? point
+        const midX = Math.round(((previous.x + point.x) / 2) * 10) / 10
+        return `C ${midX} ${previous.y}, ${midX} ${point.y}, ${point.x} ${point.y}`
+      }).join(' ')
+    : ''
+
+  const baseline = top + innerHeight
+  const area = first && last ? `${line} L ${last.x} ${baseline} L ${first.x} ${baseline} Z` : ''
+  const ticks = [0, 1, 2, 3].map(index => ({
+    value: unit * index,
+    y: Math.round((top + innerHeight - (index / 3) * innerHeight) * 10) / 10,
+  }))
+
+  return { width, height, left, right, top, bottom, points, line, area, ticks, baseline, innerWidth }
+})
 </script>
 
 <template>
-  <section class="dashboard-page">
-    <AdminPageHeader class="dashboard-header" :title="`${greeting}，${displayName}`" description="管理内容，追踪博客表现。" />
+  <section class="dash">
+    <header class="dash-head">
+      <div>
+        <h1>{{ greeting }}，{{ displayName }}</h1>
+        <p>{{ drafts ? `${drafts} 篇草稿待完成，` : '' }}{{ lastUpdatedCaption }}。</p>
+      </div>
+    </header>
 
-    <div class="stats-grid">
-      <AdminStatCard label="文章总数" :value="formatNumber(data.totalPosts)" icon="i-lucide-notebook-text" caption="文章总数趋势" tone="primary" chart="one" />
-      <AdminStatCard label="已发布" :value="formatNumber(data.publishedPosts)" icon="i-lucide-circle-check" caption="发布文章趋势" tone="success" chart="two" />
-      <AdminStatCard label="总访问量" :value="formatNumber(data.totalViews)" icon="i-lucide-chart-no-axes-column-increasing" caption="访问量趋势" tone="primary" chart="three" />
+    <div class="metrics">
+      <article class="metric">
+        <div class="metric-top">
+          <div class="metric-labels">
+            <span class="metric-eyebrow">内容</span>
+            <span class="metric-title">文章总数</span>
+          </div>
+          <span class="metric-icon"><UIcon name="i-lucide-notebook-text" /></span>
+        </div>
+        <strong class="metric-value">{{ formatNumber(data.totalPosts) }}</strong>
+        <p class="metric-meta">
+          <span class="trend trend--up">↗ {{ publishRate }}%</span> 已发布 {{ formatNumber(data.publishedPosts) }} 篇
+        </p>
+      </article>
+
+      <article class="metric">
+        <div class="metric-top">
+          <div class="metric-labels">
+            <span class="metric-eyebrow">发布</span>
+            <span class="metric-title">已发布</span>
+          </div>
+          <span class="metric-icon"><UIcon name="i-lucide-circle-check-big" /></span>
+        </div>
+        <strong class="metric-value">{{ formatNumber(data.publishedPosts) }}</strong>
+        <p class="metric-meta"><span class="trend trend--up">↗ {{ publishRate }}%</span> 发布率</p>
+      </article>
+
+      <article class="metric">
+        <div class="metric-top">
+          <div class="metric-labels">
+            <span class="metric-eyebrow">待办</span>
+            <span class="metric-title">草稿</span>
+          </div>
+          <span class="metric-icon metric-icon--warn"><UIcon name="i-lucide-pencil-line" /></span>
+        </div>
+        <strong class="metric-value">{{ formatNumber(drafts) }}</strong>
+        <p class="metric-meta">{{ drafts ? '待补充完善后发布' : '没有待完成的草稿' }}</p>
+      </article>
+
+      <article class="metric">
+        <div class="metric-top">
+          <div class="metric-labels">
+            <span class="metric-eyebrow">流量</span>
+            <span class="metric-title">总访问量</span>
+          </div>
+          <span class="metric-icon"><UIcon name="i-lucide-eye" /></span>
+        </div>
+        <strong class="metric-value">{{ formatNumber(data.totalViews) }}</strong>
+        <p class="metric-meta">篇均 {{ formatNumber(avgViews) }} 次浏览</p>
+      </article>
     </div>
 
-    <div class="dashboard-grid">
-      <UCard class="dashboard-card popular-card" :ui="{ header: 'px-7 py-6 sm:px-7', body: 'px-7 pt-0 pb-0 sm:px-7 sm:pt-0 sm:pb-0', footer: 'px-7 py-4 sm:px-7' }">
-        <template #header>
-          <div class="card-heading"><strong>热门文章</strong><UButton to="/admin/posts" variant="link" size="sm" trailing-icon="i-lucide-arrow-right">查看全部</UButton></div>
-        </template>
-        <div v-if="data.topPosts.length" class="table-wrap">
-          <table>
-            <thead><tr><th>文章标题</th><th>状态</th><th>访问量</th><th>更新时间</th></tr></thead>
-            <tbody>
-              <tr v-for="post in data.topPosts.slice(0, 5)" :key="post.id">
-                <td><NuxtLink :to="`/admin/posts/${post.id}/edit`">{{ post.title }}</NuxtLink></td>
-                <td><UBadge :color="post.status === 'ARCHIVED' ? 'neutral' : 'success'" variant="subtle" size="sm">{{ post.status === 'ARCHIVED' ? '已归档' : '已发布' }}</UBadge></td>
-                <td>{{ formatNumber(post.viewCount || 0) }}</td>
-                <td>{{ formatDate(post.updatedAt) }}</td>
-              </tr>
-            </tbody>
-          </table>
+    <div class="lower">
+      <section class="panel trend-panel">
+        <header class="panel-head">
+          <span class="panel-icon"><UIcon name="i-lucide-chart-area" /></span>
+          <div class="panel-titles">
+            <h2>访问趋势</h2>
+            <p>近 7 天 · 每日页面浏览量</p>
+          </div>
+          <span class="chip chip--muted">
+            <UIcon name="i-lucide-sparkles" />
+            演示数据
+          </span>
+        </header>
+        <div class="chart-body">
+          <svg class="chart" :viewBox="`0 0 ${chart.width} ${chart.height}`" preserveAspectRatio="none" role="img" aria-label="近 7 天访问趋势（演示数据）">
+            <defs>
+              <linearGradient id="trend-fill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="var(--admin-accent)" stop-opacity=".26" />
+                <stop offset="100%" stop-color="var(--admin-accent)" stop-opacity="0" />
+              </linearGradient>
+            </defs>
+            <g class="chart-grid">
+              <line v-for="tick in chart.ticks" :key="tick.value" :x1="chart.left" :x2="chart.width - chart.right" :y1="tick.y" :y2="tick.y" />
+            </g>
+            <g class="chart-axis">
+              <text v-for="tick in chart.ticks" :key="`label-${tick.value}`" :x="chart.left - 10" :y="tick.y + 3" text-anchor="end">{{ formatNumber(tick.value) }}</text>
+              <text v-for="(day, index) in WEEKDAYS" :key="day" :x="chart.points[index]?.x" :y="chart.height - 8" text-anchor="middle">{{ day }}</text>
+            </g>
+            <path :d="chart.area" fill="url(#trend-fill)" />
+            <path :d="chart.line" class="chart-line" />
+            <circle v-for="point in chart.points" :key="point.x" :cx="point.x" :cy="point.y" r="3" class="chart-dot" />
+          </svg>
         </div>
-        <div v-else class="empty-state"><UIcon name="i-lucide-file-text" /><p>还没有文章数据</p><UButton to="/admin/posts/new" size="sm">创建第一篇文章</UButton></div>
-        <template #footer><NuxtLink to="/admin/posts" class="card-footer-link">查看全部</NuxtLink></template>
-      </UCard>
+      </section>
 
-      <UCard class="dashboard-card recent-card" :ui="{ header: 'px-7 py-6 sm:px-7', body: 'px-7 pt-0 pb-0 sm:px-7 sm:pt-0 sm:pb-0' }">
-        <template #header><div class="card-heading"><strong>最近编辑</strong><UButton to="/admin/posts" variant="link" size="sm" trailing-icon="i-lucide-arrow-right">查看全部</UButton></div></template>
-        <div v-if="data.recentPosts.length" class="recent-list">
-          <NuxtLink v-for="post in data.recentPosts.slice(0, 5)" :key="post.id" :to="`/admin/posts/${post.id}/edit`" class="recent-item">
-            <span class="recent-icon"><UIcon name="i-lucide-file-text" /></span>
-            <strong>{{ post.title }}</strong>
-            <time>{{ formatRecentDate(post.updatedAt) }}</time>
-          </NuxtLink>
-        </div>
-        <div v-else class="empty-state compact"><p>暂无最近编辑</p></div>
-      </UCard>
+      <section class="panel feed-panel">
+        <header class="panel-head">
+          <span class="panel-icon"><UIcon name="i-lucide-pencil" /></span>
+          <div class="panel-titles">
+            <h2>最近编辑</h2>
+            <p>按更新时间排序</p>
+          </div>
+          <NuxtLink to="/admin/posts" class="panel-link">全部</NuxtLink>
+        </header>
+        <ul v-if="data.recentPosts.length" class="feed">
+          <li v-for="post in data.recentPosts.slice(0, 5)" :key="post.id">
+            <NuxtLink :to="`/admin/posts/${post.id}/edit`" class="feed-item">
+              <span class="feed-icon"><UIcon name="i-lucide-file-text" /></span>
+              <span class="feed-title">{{ post.title }}</span>
+              <time>{{ formatRecentDate(post.updatedAt) }}</time>
+            </NuxtLink>
+          </li>
+        </ul>
+        <p v-else class="panel-empty">还没有编辑记录</p>
+      </section>
     </div>
+
+    <section class="panel table-panel">
+      <header class="panel-head">
+        <span class="panel-icon"><UIcon name="i-lucide-eye" /></span>
+        <div class="panel-titles">
+          <h2>热门文章</h2>
+          <p>按累计访问量排序</p>
+        </div>
+        <NuxtLink to="/admin/posts" class="panel-link">查看全部</NuxtLink>
+      </header>
+      <div v-if="data.topPosts.length" class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>文章标题</th><th>状态</th><th class="num">访问量</th><th>更新时间</th></tr>
+          </thead>
+          <tbody>
+            <tr v-for="post in data.topPosts.slice(0, 5)" :key="post.id">
+              <td class="cell-title"><NuxtLink :to="`/admin/posts/${post.id}/edit`">{{ post.title }}</NuxtLink></td>
+              <td><UBadge :color="post.status === 'ARCHIVED' ? 'neutral' : 'success'" variant="subtle" size="sm">{{ post.status === 'ARCHIVED' ? '已归档' : '已发布' }}</UBadge></td>
+              <td class="num">{{ formatNumber(post.viewCount || 0) }}</td>
+              <td class="cell-time">{{ formatDate(post.updatedAt) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div v-else class="panel-empty">
+        <p>还没有文章数据</p>
+        <NuxtLink to="/admin/posts/new" class="btn-inline">创建第一篇文章</NuxtLink>
+      </div>
+    </section>
+
+    <section class="panel bars-panel">
+      <header class="panel-head">
+        <span class="panel-icon"><UIcon name="i-lucide-activity" /></span>
+        <div class="panel-titles">
+          <h2>内容构成</h2>
+          <p>发布与流量结构，全部由现有数据算出</p>
+        </div>
+      </header>
+      <div class="bars">
+        <div class="bar-row">
+          <div class="bar-head"><span>发布率</span><strong>{{ publishRate }}%</strong></div>
+          <div class="bar-track"><span class="bar-fill" :style="{ width: `${publishRate}%` }" /></div>
+          <p class="bar-note">{{ formatNumber(data.publishedPosts) }} / {{ formatNumber(data.totalPosts) }} 篇已上线</p>
+        </div>
+        <div class="bar-row">
+          <div class="bar-head"><span>草稿占比</span><strong>{{ draftRate }}%</strong></div>
+          <div class="bar-track"><span class="bar-fill bar-fill--warn" :style="{ width: `${draftRate}%` }" /></div>
+          <p class="bar-note">{{ formatNumber(drafts) }} 篇待完成</p>
+        </div>
+        <div class="bar-row">
+          <div class="bar-head"><span>Top 5 流量占比</span><strong>{{ topFiveShare }}%</strong></div>
+          <div class="bar-track"><span class="bar-fill" :style="{ width: `${topFiveShare}%` }" /></div>
+          <p class="bar-note">{{ formatNumber(topFiveViews) }} / {{ formatNumber(data.totalViews) }} 次</p>
+        </div>
+      </div>
+    </section>
   </section>
 </template>
 
 <style scoped>
-.dashboard-page {
+.dash { display: grid; gap: 12px; }
+
+.dash-head { padding: 4px 2px 6px; }
+.dash-head h1 { margin: 0; color: var(--admin-text); font-size: 20px; font-weight: 680; letter-spacing: -.02em; }
+.dash-head p { margin: 5px 0 0; color: var(--admin-muted); font-size: 12.5px; }
+
+/* ------------------------------------------------------------- metric cards */
+.metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+
+.metric {
+  position: relative;
   display: grid;
-  gap: 28px;
-}
-
-.dashboard-header {
-  margin: 2px 0 3px;
-}
-
-.dashboard-header :deep(h1) {
-  font-size: 36px;
-  font-weight: 650;
-  letter-spacing: -.045em;
-}
-
-.dashboard-header :deep(.admin-description) {
-  margin-top: 10px;
-  font-size: 15px;
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(3,minmax(0,1fr));
-  gap: 20px;
-}
-
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: minmax(0,1.95fr) minmax(330px,.78fr);
-  gap: 20px;
-  align-items: stretch;
-}
-
-.dashboard-card {
-  min-height: 474px;
-  border-color: var(--admin-border,var(--color-border));
-  box-shadow: none;
-}
-
-.card-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.card-heading strong {
-  font-size: 16px;
-  font-weight: 650;
-}
-
-.table-wrap {
-  width: 100%;
-  overflow-x: auto;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-
-th {
-  padding: 0 7px 13px;
-  color: var(--color-text-secondary);
-  font-size: 12px;
-  font-weight: 450;
-  text-align: left;
-}
-
-td {
-  height: 61px;
-  padding: 0 7px;
-  border-top: 1px solid var(--admin-border,var(--color-border));
-  color: var(--color-text);
-  white-space: nowrap;
-}
-
-td:first-child {
-  width: 100%;
-  font-weight: 500;
-  white-space: normal;
-}
-
-td:first-child a:hover {
-  color: var(--color-primary);
-}
-
-td:nth-child(2) {
-  min-width: 100px;
-}
-
-td:nth-child(3) {
-  min-width: 105px;
-}
-
-td:last-child {
-  min-width: 170px;
-  color: var(--color-text-secondary);
-}
-
-.card-footer-link {
-  display: block;
-  color: var(--color-primary);
-  font-size: 13px;
-  text-align: center;
-}
-
-.recent-list {
-  display: grid;
-}
-
-.recent-item {
-  display: grid;
-  min-width: 0;
-  grid-template-columns: 40px minmax(0,1fr) auto;
-  align-items: center;
-  gap: 12px;
-  min-height: 73px;
-  border-top: 1px solid var(--admin-border,var(--color-border));
-}
-
-.recent-item:hover strong {
-  color: var(--color-primary);
-}
-
-.recent-icon {
-  display: grid;
-  width: 38px;
-  height: 38px;
-  place-items: center;
-  border: 1px solid var(--admin-border,var(--color-border));
-  border-radius: 7px;
-  color: var(--color-text-secondary);
-}
-
-.recent-icon :deep(svg) {
-  width: 17px;
-  height: 17px;
-}
-
-.recent-item strong {
+  gap: 8px;
   overflow: hidden;
-  font-size: 13px;
-  font-weight: 500;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  transition: color .15s ease;
+  padding: 14px 16px 13px;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius);
+  background: var(--admin-surface);
+}
+.metric::after {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120px 90px at 100% 0%, var(--admin-accent-soft), transparent 70%);
+  content: '';
+  pointer-events: none;
 }
 
-.recent-item time {
-  color: var(--color-text-secondary);
-  font-size: 11.5px;
-  white-space: nowrap;
-}
+.metric-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.metric-labels { display: grid; gap: 2px; min-width: 0; }
+.metric-eyebrow { color: var(--admin-muted); font-size: 11px; line-height: 1.2; }
+.metric-title { color: var(--admin-body); font-size: 12.5px; font-weight: 600; line-height: 1.3; }
 
-.empty-state {
+.metric-icon {
   display: grid;
-  min-height: 315px;
+  width: 30px;
+  height: 30px;
+  flex: none;
   place-items: center;
-  align-content: center;
-  gap: 10px;
-  color: var(--color-text-muted);
-  text-align: center;
+  border: 1px solid var(--admin-accent-soft-hover);
+  border-radius: 8px;
+  background: var(--admin-accent-soft);
+  color: var(--admin-accent-text);
+}
+.metric-icon :deep(svg) { width: 15px; height: 15px; }
+.metric-icon--warn { border-color: color-mix(in oklab, var(--admin-warning) 22%, transparent); background: color-mix(in oklab, var(--admin-warning) 10%, transparent); color: var(--admin-warning); }
+
+.metric-value { color: var(--admin-text); font-size: 29px; font-weight: 680; letter-spacing: -.03em; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.metric-meta { margin: 0; display: flex; align-items: center; gap: 6px; color: var(--admin-muted); font-size: 11.5px; }
+.trend { font-weight: 640; font-variant-numeric: tabular-nums; }
+.trend--up { color: var(--admin-success); }
+
+/* ------------------------------------------------------------------- panels */
+.lower { display: grid; grid-template-columns: minmax(0, 1.62fr) minmax(300px, 1fr); gap: 12px; }
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius);
+  background: var(--admin-surface);
 }
 
-.empty-state.compact {
-  min-height: 320px;
+.panel-head { display: flex; align-items: center; gap: 10px; padding: 13px 16px; border-bottom: 1px solid var(--admin-border); }
+.panel-icon {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  place-items: center;
+  border: 1px solid var(--admin-accent-soft-hover);
+  border-radius: 7px;
+  background: var(--admin-accent-soft);
+  color: var(--admin-accent-text);
 }
+.panel-icon :deep(svg) { width: 14px; height: 14px; }
+.panel-titles { min-width: 0; }
+.panel-titles h2 { margin: 0; color: var(--admin-text); font-size: 13.5px; font-weight: 640; line-height: 1.3; }
+.panel-titles p { margin: 2px 0 0; color: var(--admin-muted); font-size: 11.5px; }
+.panel-link { margin-left: auto; color: var(--admin-muted); font-size: 11.5px; text-decoration: none; white-space: nowrap; }
+.panel-link:hover { color: var(--admin-accent-text); }
 
-.empty-state>svg {
-  width: 24px;
-  height: 24px;
-}
+.chip { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; padding: 3px 8px; border: 1px solid var(--admin-border); border-radius: 999px; color: var(--admin-muted); font-size: 10.5px; white-space: nowrap; }
+.chip :deep(svg) { width: 11px; height: 11px; }
 
-.empty-state p {
-  margin: 0;
-  font-size: 12px;
-}
+.chart-body { flex: 1; padding: 10px 14px 6px; }
+.chart { display: block; width: 100%; height: 196px; }
+.chart-grid line { stroke: var(--admin-border); stroke-width: 1; stroke-dasharray: 3 5; }
+.chart-axis text { fill: var(--admin-faint); font-size: 10px; }
+.chart-line { fill: none; stroke: var(--admin-accent); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.chart-dot { fill: var(--admin-surface); stroke: var(--admin-accent); stroke-width: 1.8; }
+
+.feed { display: grid; margin: 0; padding: 4px 0; list-style: none; }
+.feed-item { display: flex; align-items: center; gap: 10px; padding: 9px 16px; color: inherit; text-decoration: none; }
+.feed-item:hover { background: var(--admin-hover); }
+.feed-icon { display: grid; width: 24px; height: 24px; flex: none; place-items: center; border: 1px solid var(--admin-border); border-radius: 6px; color: var(--admin-muted); }
+.feed-icon :deep(svg) { width: 12px; height: 12px; }
+.feed-title { flex: 1; min-width: 0; overflow: hidden; color: var(--admin-body); font-size: 12.5px; text-overflow: ellipsis; white-space: nowrap; }
+.feed-item:hover .feed-title { color: var(--admin-accent-text); }
+.feed-item time { flex: none; color: var(--admin-faint); font-size: 11px; }
+
+/* -------------------------------------------------------------------- table */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th { padding: 9px 16px; border-bottom: 1px solid var(--admin-border); color: var(--admin-muted); font-size: 11px; font-weight: 600; text-align: left; white-space: nowrap; }
+td { padding: 11px 16px; border-bottom: 1px solid var(--admin-border); color: var(--admin-body); font-size: 12.5px; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover { background: var(--admin-hover); }
+th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.cell-title { width: 100%; white-space: normal; }
+.cell-title a { color: var(--admin-text); text-decoration: none; }
+.cell-title a:hover { color: var(--admin-accent-text); }
+.cell-time { color: var(--admin-muted); }
+
+.panel-empty { display: grid; gap: 8px; padding: 26px 16px; justify-items: center; color: var(--admin-muted); font-size: 12.5px; text-align: center; }
+.btn-inline { padding: 5px 10px; border: 1px solid var(--admin-border); border-radius: 6px; color: var(--admin-body); font-size: 12px; text-decoration: none; }
+.btn-inline:hover { border-color: var(--admin-border-strong); }
+
+/* --------------------------------------------------------------------- bars */
+.bars { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 24px; padding: 14px 16px 16px; }
+.bar-row { display: grid; gap: 6px; }
+.bar-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; color: var(--admin-muted); font-size: 11.5px; }
+.bar-head strong { color: var(--admin-text); font-size: 12.5px; font-weight: 640; font-variant-numeric: tabular-nums; }
+.bar-track { height: 5px; overflow: hidden; border-radius: 999px; background: var(--admin-border); }
+.bar-fill { display: block; height: 100%; border-radius: inherit; background: var(--admin-accent); transition: width var(--admin-duration) var(--admin-ease); }
+.bar-fill--warn { background: color-mix(in oklab, var(--admin-warning) 78%, transparent); }
+.bar-note { margin: 0; color: var(--admin-faint); font-size: 10.5px; }
 
 @media (max-width: 1180px) {
-  .dashboard-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .recent-card {
-    min-height: auto;
-  }
-}
-
-@media (max-width: 900px) {
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .dashboard-header :deep(h1) {
-    font-size: 30px;
-  }
+  .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lower { grid-template-columns: minmax(0, 1fr); }
+  .bars { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 640px) {
-  .dashboard-page {
-    gap: 20px;
-  }
-
-  .dashboard-grid,.stats-grid {
-    gap: 14px;
-  }
-
-  td:last-child {
-    min-width: 150px;
-  }
+  .metrics { grid-template-columns: minmax(0, 1fr); }
+  .bars { grid-template-columns: minmax(0, 1fr); }
+  .metric-value { font-size: 26px; }
+  .chart { height: 168px; }
 }
 </style>

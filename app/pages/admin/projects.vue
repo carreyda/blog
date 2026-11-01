@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 definePageMeta({ layout: 'admin' })
 useSeoMeta({ title: '项目管理' })
 
@@ -70,7 +70,7 @@ async function remove(project: Project) {
 
 <template>
   <section class="projects-page">
-    <AdminPageHeader eyebrow="Portfolio" title="项目管理" description="维护首页与项目页展示的作品和产品。" />
+    <AdminPageHeader title="项目管理" description="维护首页与项目页展示的作品和产品。" />
 
     <div class="projects-layout">
       <UCard class="project-form-card">
@@ -109,7 +109,7 @@ async function remove(project: Project) {
 </template>
 
 <style scoped>
-.projects-page { display: grid; gap: 26px; }
+.projects-page { display: grid; gap: 12px; }
 .projects-layout { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 22px; align-items: start; }
 .project-form-card { position: sticky; top: 86px; }
 .card-heading { display: flex; align-items: center; gap: 11px; }
