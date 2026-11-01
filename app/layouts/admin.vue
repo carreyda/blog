@@ -13,6 +13,14 @@ const openMenu = ref<'account' | 'accent' | null>(null)
 const menuRoot = ref<HTMLElement | null>(null)
 const isFullscreen = ref(false)
 
+// Same avatar the public site renders (site settings → /favicon.png fallback).
+const { data: siteSettings } = await useFetch<{ data: { avatarUrl: string | null; personName: string } }>('/api/settings', {
+  key: 'admin-site-settings',
+})
+const avatarUrl = computed(() => siteSettings.value?.data?.avatarUrl || '/favicon.png')
+const avatarBroken = ref(false)
+
+
 interface NavItem {
   label: string
   to: string
@@ -286,7 +294,10 @@ onBeforeUnmount(() => {
 
           <div class="menu-wrap">
             <button type="button" class="account" :aria-expanded="openMenu === 'account'" @click="toggleMenu('account')">
-              <span class="avatar">{{ avatarLetter }}</span>
+              <span class="avatar">
+                <img v-if="avatarUrl && !avatarBroken" :src="avatarUrl" :alt="displayName" @error="avatarBroken = true">
+                <template v-else>{{ avatarLetter }}</template>
+              </span>
               <span class="account-name">{{ displayName }}</span>
               <svg class="ic ic--sm" aria-hidden="true"><use href="#ic-chevron" /></svg>
             </button>
@@ -457,8 +468,8 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 10px;
-  height: 36px;
-  padding: 0 10px;
+  height: 40px;
+  padding: 0 11px;
   border-radius: var(--admin-radius);
   color: var(--admin-body);
   font-size: 13px;
@@ -687,12 +698,19 @@ onBeforeUnmount(() => {
   display: grid;
   width: 26px;
   height: 26px;
+  overflow: hidden;
   place-items: center;
   border-radius: 50%;
   background: var(--admin-avatar-bg);
   color: #fff;
   font-size: 11px;
   font-weight: 600;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .account-name {
