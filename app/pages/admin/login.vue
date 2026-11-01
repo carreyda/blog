@@ -26,94 +26,125 @@ async function submit() {
 
 <template>
   <div class="login-panel">
-    <div class="login-heading">
-      <span class="login-icon"><UIcon name="i-lucide-command" /></span>
-      <p>欢迎回来</p>
-      <h2>登录管理后台</h2>
-      <span>使用管理员账号进入内容工作台。</span>
-    </div>
-    <UCard class="auth-card">
-      <form class="auth-form" @submit.prevent="submit">
-        <UFormField label="用户名" required><UInput v-model="form.username" autocomplete="username" size="xl" icon="i-lucide-user-round" class="w-full" placeholder="输入用户名" autofocus /></UFormField>
-        <UFormField label="密码" required>
-          <UInput v-model="form.password" :type="showPassword ? 'text' : 'password'" autocomplete="current-password" size="xl" icon="i-lucide-lock-keyhole" class="w-full" placeholder="输入密码">
-            <template #trailing><UButton type="button" color="neutral" variant="ghost" size="xs" :icon="showPassword ? 'i-lucide-eye-off' : 'i-lucide-eye'" :aria-label="showPassword ? '隐藏密码' : '显示密码'" @click="showPassword = !showPassword" /></template>
-          </UInput>
-        </UFormField>
-        <UButton type="submit" block size="xl" icon="i-lucide-log-in" :loading="pending">进入工作台</UButton>
-      </form>
-    </UCard>
-    <NuxtLink to="/" class="back-link"><UIcon name="i-lucide-arrow-left" />返回博客首页</NuxtLink>
+    <header class="login-head">
+      <p class="login-kicker">ADMIN CONSOLE</p>
+      <h1>欢迎回来</h1>
+      <p class="login-sub">使用管理员账号进入内容工作台。</p>
+    </header>
+
+    <form class="login-card" @submit.prevent="submit">
+      <UFormField label="管理员账号" required>
+        <UInput
+          v-model="form.username"
+          autocomplete="username"
+          size="lg"
+          icon="i-lucide-user-round"
+          class="w-full"
+          placeholder="输入用户名"
+          autofocus
+        />
+      </UFormField>
+
+      <UFormField label="登录密码" required>
+        <UInput
+          v-model="form.password"
+          :type="showPassword ? 'text' : 'password'"
+          autocomplete="current-password"
+          size="lg"
+          icon="i-lucide-lock-keyhole"
+          class="w-full"
+          placeholder="输入密码"
+        >
+          <template #trailing>
+            <UButton
+              type="button"
+              color="neutral"
+              variant="ghost"
+              size="xs"
+              :icon="showPassword ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+              :aria-label="showPassword ? '隐藏密码' : '显示密码'"
+              @click="showPassword = !showPassword"
+            />
+          </template>
+        </UInput>
+      </UFormField>
+
+      <UButton type="submit" block size="lg" class="login-submit" :loading="pending">
+        进入工作台
+      </UButton>
+    </form>
+
+    <NuxtLink to="/" class="back-link">返回博客首页</NuxtLink>
   </div>
 </template>
 
 <style scoped>
 .login-panel {
-  display: grid;
-  width: min(100%,430px);
-  gap: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
-.login-heading {
-  text-align: center;
-}
-
-.login-icon {
-  display: grid;
-  width: 42px;
-  height: 42px;
-  margin: 0 auto 22px;
-  place-items: center;
-  border: 1px solid rgba(68,147,248,.22);
-  border-radius: 13px;
-  color: #2878d4;
-  background: rgba(68,147,248,.1);
-  font-size: 18px;
-}
-
-.login-heading p {
-  margin: 0 0 7px;
-  color: #2878d4;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .12em;
-}
-
-.login-heading h2 {
+.login-kicker {
   margin: 0;
-  font-size: 27px;
-  letter-spacing: -.035em;
+  color: var(--admin-accent-text);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .16em;
 }
 
-.login-heading>span:last-child {
-  display: block;
-  margin-top: 9px;
-  color: var(--color-text-secondary);
+.login-head h1 {
+  margin: 10px 0 0;
+  color: var(--admin-text);
+  font-size: 28px;
+  font-weight: 680;
+  letter-spacing: -.035em;
+  line-height: 1.2;
+}
+
+.login-sub {
+  margin: 9px 0 0;
+  color: var(--admin-muted);
   font-size: 13px;
 }
 
-.auth-card {
-  box-shadow: 0 18px 50px rgba(15,23,42,.08);
+.login-card {
+  display: grid;
+  gap: 16px;
+  padding: 24px 24px 22px;
+  border: 1px solid var(--admin-border);
+  border-radius: 14px;
+  background: var(--admin-surface);
+  box-shadow: var(--admin-shadow);
 }
 
-.auth-form {
-  display: grid;
-  gap: 20px;
-  padding: 6px;
+.login-card :deep(label) {
+  color: var(--admin-body);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.login-card :deep(button[type='button']) {
+  color: var(--admin-muted);
+}
+
+.login-submit {
+  height: 42px;
+  margin-top: 2px;
+  border-radius: var(--admin-radius);
+  font-size: 13.5px;
+  font-weight: 600;
 }
 
 .back-link {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  color: var(--color-text-secondary);
+  align-self: center;
+  color: var(--admin-muted);
   font-size: 12px;
   text-decoration: none;
-  transition: color .15s ease;
+  transition: color var(--admin-duration-fast) var(--admin-ease);
 }
 
 .back-link:hover {
-  color: var(--color-primary);
+  color: var(--admin-accent-text);
 }
 </style>

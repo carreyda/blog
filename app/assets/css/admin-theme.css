@@ -1,0 +1,261 @@
+/*
+ * Admin design tokens.
+ *
+ * Everything here is scoped to `.admin` (the root element of both admin
+ * layouts) or to `html[data-accent]`, so the public site keeps its own
+ * palette. The accent ramps live on <html> on purpose: portalled content
+ * (dropdown menus, dialogs) is appended to <body> and would otherwise miss
+ * the variables.
+ *
+ * Switch accent by setting `data-accent` on <html> — see useAdminAccent().
+ */
+
+/* ---------------------------------------------------------------- accents */
+
+/* `:root` carries the default palette so admin surfaces never render without an
+   accent — the login layout has no data-accent hook until the composable runs. */
+:root,
+html[data-accent='sky'] {
+  --accent-50: #f0f6ff;
+  --accent-100: #ddecff;
+  --accent-200: #c0dbff;
+  --accent-300: #98c3f9;
+  --accent-400: #67a1eb;
+  --accent-500: #2875d0;
+  --accent-600: #1962b5;
+  --accent-700: #155297;
+  --accent-800: #16447b;
+  --accent-900: #153964;
+  --accent-950: #0d2542;
+}
+
+html[data-accent='indigo'] {
+  --accent-50: #f2f5ff;
+  --accent-100: #e3eaff;
+  --accent-200: #cbd7ff;
+  --accent-300: #abbdfa;
+  --accent-400: #8399ec;
+  --accent-500: #576bd1;
+  --accent-600: #4759b6;
+  --accent-700: #3b4a98;
+  --accent-800: #323e7c;
+  --accent-900: #293465;
+  --accent-950: #1a2242;
+}
+
+html[data-accent='violet'] {
+  --accent-50: #f6f4fe;
+  --accent-100: #ece7fd;
+  --accent-200: #dcd2fa;
+  --accent-300: #c5b5f1;
+  --accent-400: #a68edf;
+  --accent-500: #805fc2;
+  --accent-600: #6d4ea8;
+  --accent-700: #5b418c;
+  --accent-800: #4b3673;
+  --accent-900: #3d2e5d;
+  --accent-950: #281d3d;
+}
+
+html[data-accent='emerald'] {
+  --accent-50: #eff9f3;
+  --accent-100: #daf1e5;
+  --accent-200: #bae4ce;
+  --accent-300: #8ed1af;
+  --accent-400: #51b588;
+  --accent-500: #008c5f;
+  --accent-600: #007650;
+  --accent-700: #006242;
+  --accent-800: #005236;
+  --accent-900: #00442c;
+  --accent-950: #002d1c;
+}
+
+html[data-accent='amber'] {
+  --accent-50: #faf5ef;
+  --accent-100: #f5e8da;
+  --accent-200: #ebd5bc;
+  --accent-300: #dbb992;
+  --accent-400: #c3955e;
+  --accent-500: #a06818;
+  --accent-600: #895705;
+  --accent-700: #724807;
+  --accent-800: #5e3c0d;
+  --accent-900: #4d320f;
+  --accent-950: #32200a;
+}
+
+html[data-accent='rose'] {
+  --accent-50: #fef3f3;
+  --accent-100: #fde3e4;
+  --accent-200: #f9cbce;
+  --accent-300: #efabaf;
+  --accent-400: #db8088;
+  --accent-500: #ba4c5a;
+  --accent-600: #a13c4a;
+  --accent-700: #86323e;
+  --accent-800: #6e2b34;
+  --accent-900: #5a252b;
+  --accent-950: #3b181c;
+}
+
+/* ----------------------------------------------------------------- tokens */
+
+.admin {
+  --admin-side-width: 240px;
+  --admin-side-collapsed: 72px;
+  --admin-header-height: 60px;
+
+  --admin-radius-xs: 4px;
+  --admin-radius: 8px;
+  --admin-radius-lg: 12px;
+  --admin-radius-pill: 999px;
+
+  --admin-duration: 180ms;
+  --admin-duration-fast: 120ms;
+  --admin-ease: cubic-bezier(.2, 0, 0, 1);
+
+  --admin-font: Inter, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --admin-font-mono: "Geist Mono", "SF Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* accent */
+  --admin-accent: var(--accent-500);
+  --admin-accent-hover: var(--accent-600);
+  --admin-accent-text: var(--accent-700);
+  --admin-accent-contrast: #fff;
+  --admin-accent-soft: color-mix(in oklab, var(--accent-500) 9%, transparent);
+  --admin-accent-soft-hover: color-mix(in oklab, var(--accent-500) 14%, transparent);
+  --admin-accent-ring: color-mix(in oklab, var(--accent-500) 30%, transparent);
+
+  /* surfaces */
+  --admin-bg: #f4f6f7;
+  --admin-surface: #fff;
+  --admin-surface-2: #fafbfc;
+  --admin-border: #e3e7ea;
+  --admin-border-strong: #d2d8dd;
+
+  /* text */
+  --admin-text: #171d22;
+  --admin-body: #3f4850;
+  --admin-muted: #75808a;
+  --admin-faint: #a6b0b8;
+
+  /* interactions */
+  --admin-hover: #f1f4f6;
+  --admin-active-bg: var(--admin-accent-soft);
+  --admin-active-text: var(--admin-accent-text);
+  --admin-topbar-bg: rgb(255 255 255 / 86%);
+  --admin-avatar-bg: #1a2228;
+
+  /* elevation */
+  --admin-shadow-sm: 0 1px 2px rgb(16 24 32 / 6%);
+  --admin-shadow: 0 10px 26px -14px rgb(16 24 32 / 22%);
+  --admin-shadow-lg: 0 26px 64px -28px rgb(16 24 32 / 28%);
+
+  /* status */
+  --admin-success: #1f9254;
+  --admin-warning: #a06818;
+  --admin-danger: #c0392f;
+
+  /* --- Nuxt UI bridge: components inside the admin follow the accent --- */
+  --ui-radius: var(--admin-radius);
+  --ui-primary: var(--admin-accent);
+  --color-primary: var(--ui-primary);
+  --ui-color-primary-50: var(--accent-50);
+  --ui-color-primary-100: var(--accent-100);
+  --ui-color-primary-200: var(--accent-200);
+  --ui-color-primary-300: var(--accent-300);
+  --ui-color-primary-400: var(--accent-400);
+  --ui-color-primary-500: var(--accent-500);
+  --ui-color-primary-600: var(--accent-600);
+  --ui-color-primary-700: var(--accent-700);
+  --ui-color-primary-800: var(--accent-800);
+  --ui-color-primary-900: var(--accent-900);
+  --ui-color-primary-950: var(--accent-950);
+  --ui-bg: var(--admin-surface);
+  --ui-bg-muted: var(--admin-bg);
+  --ui-bg-elevated: var(--admin-surface);
+  --ui-bg-accented: var(--admin-hover);
+  --ui-border: var(--admin-border);
+  --ui-border-muted: var(--admin-border);
+  --ui-border-accented: var(--admin-border-strong);
+  --ui-text: var(--admin-body);
+  --ui-text-toned: var(--admin-body);
+  --ui-text-muted: var(--admin-muted);
+  --ui-text-dimmed: var(--admin-faint);
+  --ui-text-highlighted: var(--admin-text);
+
+  /* --- site tokens: admin pages that still use them follow the same palette --- */
+  --color-text: var(--admin-text);
+  --color-text-secondary: var(--admin-muted);
+  --color-text-muted: var(--admin-faint);
+  --color-lead: var(--admin-body);
+  --color-border: var(--admin-border);
+  --color-background: var(--admin-surface);
+  --color-background-secondary: var(--admin-bg);
+  --color-primary-hover: var(--admin-accent-hover);
+}
+
+html.dark .admin {
+  --admin-accent: var(--accent-400);
+  --admin-accent-hover: var(--accent-300);
+  --admin-accent-text: var(--accent-300);
+  --admin-accent-contrast: #08111a;
+  --admin-accent-soft: color-mix(in oklab, var(--accent-400) 16%, transparent);
+  --admin-accent-soft-hover: color-mix(in oklab, var(--accent-400) 22%, transparent);
+  --admin-accent-ring: color-mix(in oklab, var(--accent-400) 36%, transparent);
+
+  --admin-bg: #0b0f12;
+  --admin-surface: #11161a;
+  --admin-surface-2: #151b20;
+  --admin-border: #232b31;
+  --admin-border-strong: #2f3941;
+
+  --admin-text: #e9eef2;
+  --admin-body: #a9b5bd;
+  --admin-muted: #7d8a93;
+  --admin-faint: #55626b;
+
+  --admin-hover: #161d22;
+  --admin-active-bg: var(--admin-accent-soft);
+  --admin-active-text: var(--admin-accent-text);
+  --admin-topbar-bg: rgb(11 15 18 / 88%);
+  --admin-avatar-bg: #1b2a33;
+
+  --admin-shadow-sm: 0 1px 2px rgb(0 0 0 / 40%);
+  --admin-shadow: 0 10px 26px -14px rgb(0 0 0 / 60%);
+  --admin-shadow-lg: 0 26px 64px -28px rgb(0 0 0 / 70%);
+
+  --admin-success: #4cc38a;
+  --admin-warning: #e0a54a;
+  --admin-danger: #f0736a;
+
+  --ui-primary: var(--admin-accent);
+  --ui-bg: var(--admin-surface);
+  --ui-bg-muted: var(--admin-bg);
+  --ui-bg-elevated: var(--admin-surface-2);
+  --ui-bg-accented: var(--admin-hover);
+  --ui-border: var(--admin-border);
+  --ui-border-muted: var(--admin-border);
+  --ui-border-accented: var(--admin-border-strong);
+  --ui-text: var(--admin-body);
+  --ui-text-toned: var(--admin-body);
+  --ui-text-muted: var(--admin-muted);
+  --ui-text-dimmed: var(--admin-faint);
+  --ui-text-highlighted: var(--admin-text);
+}
+
+/*
+ * Portalled menus (UDropdownMenu/UCommandPalette) render under <body>, outside
+ * `.admin`, so they only inherit the accent ramp from <html>. Re-pointing the
+ * two colour aliases is enough to keep them on-theme.
+ */
+.admin-menu {
+  --ui-primary: var(--accent-500);
+  --color-primary: var(--ui-primary);
+  --ui-radius: 10px;
+}
+
+html.dark .admin-menu {
+  --ui-primary: var(--accent-400);
+}
