@@ -284,7 +284,7 @@ const chart = computed(() => {
 
 .dash-head { padding: 4px 2px 6px; }
 .dash-head h1 { margin: 0; color: var(--admin-text); font-size: 20px; font-weight: 680; letter-spacing: -.02em; }
-.dash-head p { margin: 5px 0 0; color: var(--admin-muted); font-size: 12.5px; }
+.dash-head p { margin: 6px 0 0; color: var(--admin-muted); font-size: 12.5px; }
 
 /* ------------------------------------------------------------- metric cards */
 .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
@@ -294,7 +294,7 @@ const chart = computed(() => {
   display: grid;
   gap: 8px;
   overflow: hidden;
-  padding: 14px 16px 13px;
+  padding: 14px 16px 14px;
   border: 1px solid var(--admin-border);
   border-radius: var(--admin-radius);
   background: var(--admin-surface);
@@ -323,7 +323,7 @@ const chart = computed(() => {
   background: var(--admin-accent-soft);
   color: var(--admin-accent-text);
 }
-.metric-icon :deep(svg) { width: 15px; height: 15px; }
+.metric-icon :deep(svg) { width: 16px; height: 16px; }
 .metric-icon--warn { border-color: color-mix(in oklab, var(--admin-warning) 22%, transparent); background: color-mix(in oklab, var(--admin-warning) 10%, transparent); color: var(--admin-warning); }
 
 .metric-value { color: var(--admin-text); font-size: 29px; font-weight: 680; letter-spacing: -.03em; line-height: 1.05; font-variant-numeric: tabular-nums; }
@@ -343,7 +343,7 @@ const chart = computed(() => {
   background: var(--admin-surface);
 }
 
-.panel-head { display: flex; align-items: center; gap: 10px; padding: 13px 16px; border-bottom: 1px solid var(--admin-border); }
+.panel-head { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--admin-border); }
 .panel-icon {
   display: grid;
   width: 28px;
@@ -351,7 +351,7 @@ const chart = computed(() => {
   flex: none;
   place-items: center;
   border: 1px solid var(--admin-accent-soft-hover);
-  border-radius: 7px;
+  border-radius: 8px;
   background: var(--admin-accent-soft);
   color: var(--admin-accent-text);
 }
@@ -362,8 +362,8 @@ const chart = computed(() => {
 .panel-link { margin-left: auto; color: var(--admin-muted); font-size: 11.5px; text-decoration: none; white-space: nowrap; }
 .panel-link:hover { color: var(--admin-accent-text); }
 
-.chip { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; padding: 3px 8px; border: 1px solid var(--admin-border); border-radius: 999px; color: var(--admin-muted); font-size: 10.5px; white-space: nowrap; }
-.chip :deep(svg) { width: 11px; height: 11px; }
+.chip { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; padding: 4px 8px; border: 1px solid var(--admin-border); border-radius: 1000px; color: var(--admin-muted); font-size: 10.5px; white-space: nowrap; }
+.chip :deep(svg) { width: 12px; height: 12px; }
 
 .chart-body { flex: 1; padding: 10px 14px 6px; }
 .chart { display: block; width: 100%; height: 196px; }
@@ -373,7 +373,7 @@ const chart = computed(() => {
 .chart-dot { fill: var(--admin-surface); stroke: var(--admin-accent); stroke-width: 1.8; }
 
 .feed { display: grid; margin: 0; padding: 4px 0; list-style: none; }
-.feed-item { display: flex; align-items: center; gap: 10px; padding: 9px 16px; color: inherit; text-decoration: none; }
+.feed-item { display: flex; align-items: center; gap: 10px; padding: 10px 16px; color: inherit; text-decoration: none; }
 .feed-item:hover { background: var(--admin-hover); }
 .feed-icon { display: grid; width: 24px; height: 24px; flex: none; place-items: center; border: 1px solid var(--admin-border); border-radius: 6px; color: var(--admin-muted); }
 .feed-icon :deep(svg) { width: 12px; height: 12px; }
@@ -384,8 +384,8 @@ const chart = computed(() => {
 /* -------------------------------------------------------------------- table */
 .table-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; }
-th { padding: 9px 16px; border-bottom: 1px solid var(--admin-border); color: var(--admin-muted); font-size: 11px; font-weight: 600; text-align: left; white-space: nowrap; }
-td { padding: 11px 16px; border-bottom: 1px solid var(--admin-border); color: var(--admin-body); font-size: 12.5px; white-space: nowrap; }
+th { padding: 10px 16px; border-bottom: 1px solid var(--admin-border); color: var(--admin-muted); font-size: 11px; font-weight: 600; text-align: left; white-space: nowrap; }
+td { padding: 12px 16px; border-bottom: 1px solid var(--admin-border); color: var(--admin-body); font-size: 12.5px; white-space: nowrap; }
 tbody tr:last-child td { border-bottom: 0; }
 tbody tr:hover { background: var(--admin-hover); }
 th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
@@ -395,7 +395,7 @@ th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
 .cell-time { color: var(--admin-muted); }
 
 .panel-empty { display: grid; gap: 8px; padding: 26px 16px; justify-items: center; color: var(--admin-muted); font-size: 12.5px; text-align: center; }
-.btn-inline { padding: 5px 10px; border: 1px solid var(--admin-border); border-radius: 6px; color: var(--admin-body); font-size: 12px; text-decoration: none; }
+.btn-inline { padding: 6px 10px; border: 1px solid var(--admin-border); border-radius: 6px; color: var(--admin-body); font-size: 12px; text-decoration: none; }
 .btn-inline:hover { border-color: var(--admin-border-strong); }
 
 /* --------------------------------------------------------------------- bars */
@@ -403,7 +403,7 @@ th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
 .bar-row { display: grid; gap: 6px; }
 .bar-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; color: var(--admin-muted); font-size: 11.5px; }
 .bar-head strong { color: var(--admin-text); font-size: 12.5px; font-weight: 640; font-variant-numeric: tabular-nums; }
-.bar-track { height: 5px; overflow: hidden; border-radius: 999px; background: var(--admin-border); }
+.bar-track { height: 6px; overflow: hidden; border-radius: 1000px; background: var(--admin-border); }
 .bar-fill { display: block; height: 100%; border-radius: inherit; background: var(--admin-accent); transition: width var(--admin-duration) var(--admin-ease); }
 .bar-fill--warn { background: color-mix(in oklab, var(--admin-warning) 78%, transparent); }
 .bar-note { margin: 0; color: var(--admin-faint); font-size: 10.5px; }

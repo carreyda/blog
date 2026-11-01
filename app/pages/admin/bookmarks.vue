@@ -400,13 +400,13 @@ function markIconBroken(id: number) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 11px;
+  gap: 12px;
 }
 
 .card-heading-main {
   display: flex;
   align-items: center;
-  gap: 11px;
+  gap: 12px;
   min-width: 0;
 }
 
@@ -428,7 +428,7 @@ function markIconBroken(id: number) {
 }
 
 .card-heading p,.list-heading p {
-  margin: 3px 0 0;
+  margin: 4px 0 0;
   color: var(--color-text-muted);
   font-size: 10.5px;
 }
@@ -439,7 +439,7 @@ function markIconBroken(id: number) {
   margin-bottom: 18px;
   padding: 14px;
   border: 1px solid var(--color-border);
-  border-radius: 9px;
+  border-radius: 10px;
   background: var(--color-background-secondary);
 }
 
@@ -499,7 +499,7 @@ function markIconBroken(id: number) {
   min-height: 58px;
   align-items: center;
   gap: 10px;
-  padding: 9px 12px;
+  padding: 10px 12px;
   border: 1px solid var(--color-border);
   border-radius: 8px;
   cursor: pointer;
@@ -513,7 +513,7 @@ function markIconBroken(id: number) {
 
 .visibility-toggle span {
   display: grid;
-  gap: 3px;
+  gap: 4px;
 }
 
 .visibility-toggle strong {
@@ -559,7 +559,7 @@ function markIconBroken(id: number) {
 
 .category-row>div:nth-of-type(1) {
   display: grid;
-  gap: 3px;
+  gap: 4px;
 }
 
 .category-row.is-root strong {
@@ -603,7 +603,7 @@ function markIconBroken(id: number) {
   grid-template-columns: 42px minmax(0,1fr) 64px;
   align-items: center;
   gap: 12px;
-  padding: 13px 8px;
+  padding: 14px 8px;
   border-top: 1px solid var(--color-border);
 }
 
@@ -618,7 +618,7 @@ function markIconBroken(id: number) {
   overflow: hidden;
   place-items: center;
   border: 1px solid var(--color-border);
-  border-radius: 11px;
+  border-radius: 12px;
   color: var(--color-text-secondary);
   background: var(--color-background);
 }
@@ -642,7 +642,7 @@ function markIconBroken(id: number) {
   display: flex;
   min-width: 0;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
 }
 
 .bookmark-info strong {
@@ -654,7 +654,7 @@ function markIconBroken(id: number) {
 
 .bookmark-info p {
   display: -webkit-box;
-  margin: 5px 0 0;
+  margin: 6px 0 0;
   color: var(--color-text-secondary);
   overflow: hidden;
   font-size: 10.5px;
@@ -683,7 +683,7 @@ function markIconBroken(id: number) {
   min-width: 0;
   max-width: 100%;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   overflow: hidden;
   color: var(--color-primary);
   font-size: 9.5px;

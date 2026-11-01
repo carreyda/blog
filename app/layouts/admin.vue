@@ -343,8 +343,8 @@ onBeforeUnmount(() => {
 }
 
 .ic {
-  width: 17px;
-  height: 17px;
+  width: 18px;
+  height: 18px;
   flex: 0 0 auto;
   fill: none;
   stroke: currentColor;
@@ -354,8 +354,8 @@ onBeforeUnmount(() => {
 }
 
 .ic--sm {
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
 }
 
 /* ------------------------------------------------------------- sidebar */
@@ -381,7 +381,7 @@ onBeforeUnmount(() => {
 .side-head {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 10px;
   height: var(--admin-header-height);
   padding: 0 14px;
   border-bottom: 1px solid var(--admin-border);
@@ -391,7 +391,7 @@ onBeforeUnmount(() => {
   display: flex;
   min-width: 0;
   align-items: center;
-  gap: 9px;
+  gap: 10px;
   color: inherit;
   text-decoration: none;
 }
@@ -402,7 +402,7 @@ onBeforeUnmount(() => {
   width: 30px;
   height: 30px;
   place-items: center;
-  border-radius: 9px;
+  border-radius: 10px;
   background: var(--admin-accent);
   color: var(--admin-accent-contrast);
   font-size: 11.5px;
@@ -469,7 +469,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 10px;
   height: 40px;
-  padding: 0 11px;
+  padding: 0 12px;
   border-radius: var(--admin-radius);
   color: var(--admin-body);
   font-size: 13px;
@@ -502,8 +502,8 @@ onBeforeUnmount(() => {
 }
 
 .nav-icon {
-  width: 17px;
-  height: 17px;
+  width: 18px;
+  height: 18px;
   opacity: .9;
 }
 
@@ -581,10 +581,10 @@ onBeforeUnmount(() => {
 
 .unread-dot {
   position: absolute;
-  top: 7px;
+  top: 8px;
   right: 8px;
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: var(--admin-danger);
   box-shadow: 0 0 0 2px var(--admin-surface);
@@ -593,7 +593,7 @@ onBeforeUnmount(() => {
 .crumb {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   margin-left: 6px;
   color: var(--admin-muted);
   font-size: 12.5px;
@@ -665,8 +665,8 @@ onBeforeUnmount(() => {
 }
 
 .btn-primary .ic {
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
 }
 
 .divider-v {
@@ -679,7 +679,7 @@ onBeforeUnmount(() => {
 .account {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   height: 34px;
   padding: 0 8px 0 4px;
   border: 0;
@@ -736,7 +736,7 @@ onBeforeUnmount(() => {
   right: 0;
   z-index: 40;
   min-width: 176px;
-  padding: 5px;
+  padding: 6px;
   border: 1px solid var(--admin-border);
   border-radius: 10px;
   background: var(--admin-surface);
@@ -753,11 +753,11 @@ onBeforeUnmount(() => {
 .swatch {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   height: 32px;
   padding: 0 8px;
   border: 1px solid transparent;
-  border-radius: 7px;
+  border-radius: 8px;
   background: transparent;
   color: var(--admin-body);
   font-size: 12px;
@@ -790,8 +790,8 @@ onBeforeUnmount(() => {
 }
 
 .swatch-check {
-  width: 13px;
-  height: 13px;
+  width: 14px;
+  height: 14px;
   color: var(--admin-accent);
 }
 
@@ -801,9 +801,9 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 8px;
   height: 34px;
-  padding: 0 9px;
+  padding: 0 10px;
   border: 0;
-  border-radius: 7px;
+  border-radius: 8px;
   background: transparent;
   color: var(--admin-body);
   font-family: inherit;
@@ -829,7 +829,7 @@ onBeforeUnmount(() => {
 
 .menu-sep {
   height: 1px;
-  margin: 5px 4px;
+  margin: 6px 4px;
   background: var(--admin-border);
 }
 
@@ -896,7 +896,7 @@ onBeforeUnmount(() => {
   }
 
   .btn-primary {
-    padding: 0 9px;
+    padding: 0 10px;
   }
 }
 </style>

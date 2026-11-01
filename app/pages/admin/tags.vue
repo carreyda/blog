@@ -95,12 +95,12 @@ async function remove(tag: Tag) {
 .tags-page { display: grid; gap: 12px; }
 .tags-layout { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 18px; align-items: start; }
 .form-card { position: sticky; top: 86px; }
-.card-title { display: flex; align-items: center; gap: 11px; }
-.title-icon { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 9px; background: color-mix(in srgb, var(--color-primary) 10%, transparent); color: var(--color-primary); }
-.title-icon :deep(svg) { width: 15px; height: 15px; }
+.card-title { display: flex; align-items: center; gap: 12px; }
+.title-icon { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 10px; background: color-mix(in srgb, var(--color-primary) 10%, transparent); color: var(--color-primary); }
+.title-icon :deep(svg) { width: 16px; height: 16px; }
 .card-title strong, .list-heading strong { display: block; font-size: 13.5px; font-weight: 650; }
-.card-title p, .list-heading p { margin: 3px 0 0; color: var(--color-text-muted); font-size: 10.5px; }
-.tag-form { display: grid; gap: 19px; }
+.card-title p, .list-heading p { margin: 4px 0 0; color: var(--color-text-muted); font-size: 10.5px; }
+.tag-form { display: grid; gap: 20px; }
 .buttons { display: flex; gap: 8px; padding-top: 2px; }
 .list-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .tag-list { display: grid; }
@@ -108,8 +108,8 @@ async function remove(tag: Tag) {
 .tag-list-head { padding: 0 10px 10px; color: var(--color-text-muted); font-size: 10px; font-weight: 600; }
 .tag-row { min-height: 66px; padding: 10px; border-top: 1px solid var(--color-border); }
 .tag-row:hover { background: color-mix(in srgb, var(--color-background-secondary) 70%, transparent); }
-.tag-info { display: flex; min-width: 0; align-items: center; gap: 11px; }
-.hash { display: grid; width: 34px; height: 34px; flex: 0 0 auto; place-items: center; border: 1px solid var(--color-border); border-radius: 9px; color: var(--color-primary); font-size: 14px; font-weight: 700; }
+.tag-info { display: flex; min-width: 0; align-items: center; gap: 12px; }
+.hash { display: grid; width: 34px; height: 34px; flex: 0 0 auto; place-items: center; border: 1px solid var(--color-border); border-radius: 10px; color: var(--color-primary); font-size: 14px; font-weight: 700; }
 .tag-info>span:last-child { display: grid; min-width: 0; gap: 4px; }
 .tag-info strong { overflow: hidden; font-size: 12.5px; font-weight: 620; text-overflow: ellipsis; white-space: nowrap; }
 .tag-info code { overflow: hidden; color: var(--color-text-muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }

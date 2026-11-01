@@ -104,7 +104,7 @@ const year = new Date().getFullYear()
   width: 30px;
   height: 30px;
   place-items: center;
-  border-radius: 9px;
+  border-radius: 10px;
   background: var(--admin-accent);
   color: var(--admin-accent-contrast);
   font-size: 11.5px;
@@ -154,8 +154,8 @@ const year = new Date().getFullYear()
 }
 
 .dot {
-  width: 7px;
-  height: 7px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: var(--admin-border-strong);
 }
@@ -168,7 +168,7 @@ const year = new Date().getFullYear()
   margin-left: 6px;
   padding: 1px 8px;
   border: 1px solid var(--admin-border);
-  border-radius: 5px;
+  border-radius: 6px;
   background: var(--admin-surface);
   color: var(--admin-muted);
   font-size: 10.5px;
@@ -179,7 +179,7 @@ const year = new Date().getFullYear()
 .art-body {
   display: flex;
   flex-direction: column;
-  gap: 11px;
+  gap: 12px;
   padding: 22px 20px 26px;
 }
 
@@ -204,7 +204,7 @@ const year = new Date().getFullYear()
 .art-foot {
   display: flex;
   justify-content: space-between;
-  padding: 9px 14px;
+  padding: 10px 14px;
   border-top: 1px solid var(--admin-border);
   background: var(--admin-surface-2);
   color: var(--admin-faint);
@@ -213,7 +213,7 @@ const year = new Date().getFullYear()
 
 .chip {
   position: absolute;
-  padding: 5px 11px;
+  padding: 6px 12px;
   border: 1px solid var(--admin-border);
   border-radius: var(--admin-radius-pill);
   background: var(--admin-surface);

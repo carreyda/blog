@@ -103,27 +103,27 @@ async function remove(post: Post) {
 
 .table-scroll { width: 100%; overflow-x: auto; }
 table { width: 100%; min-width: 760px; border-collapse: collapse; }
-th { padding: 9px 16px; border-bottom: 1px solid var(--admin-border); color: var(--admin-muted); font-size: 11px; font-weight: 600; text-align: left; white-space: nowrap; }
+th { padding: 10px 16px; border-bottom: 1px solid var(--admin-border); color: var(--admin-muted); font-size: 11px; font-weight: 600; text-align: left; white-space: nowrap; }
 th:last-child { width: 76px; }
-td { padding: 11px 16px; border-bottom: 1px solid var(--admin-border); color: var(--admin-body); font-size: 12.5px; vertical-align: middle; white-space: nowrap; }
+td { padding: 12px 16px; border-bottom: 1px solid var(--admin-border); color: var(--admin-body); font-size: 12.5px; vertical-align: middle; white-space: nowrap; }
 tbody tr:last-child td { border-bottom: 0; }
 tbody tr:hover { background: var(--admin-hover); }
 td:first-child { width: 100%; white-space: normal; }
 .cell-time { color: var(--admin-muted); }
 .post-title { color: var(--admin-text); font-size: 13px; font-weight: 600; line-height: 1.4; text-decoration: none; }
 .post-title:hover { color: var(--admin-accent-text); }
-.post-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
+.post-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .post-tags span { color: var(--admin-faint); font-size: 11px; }
 .metric { display: inline-flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; }
-.metric :deep(svg) { width: 13px; height: 13px; color: var(--admin-faint); }
+.metric :deep(svg) { width: 14px; height: 14px; color: var(--admin-faint); }
 .row-actions { display: flex; justify-content: flex-end; gap: 2px; }
 
 .loading-list { display: grid; gap: 8px; padding: 14px; }
-.empty-state { display: grid; min-height: 320px; place-items: center; align-content: center; gap: 9px; text-align: center; }
+.empty-state { display: grid; min-height: 320px; place-items: center; align-content: center; gap: 10px; text-align: center; }
 .empty-state>span { display: grid; width: 44px; height: 44px; margin-bottom: 4px; place-items: center; border: 1px solid var(--admin-border); border-radius: 10px; color: var(--admin-muted); }
 .empty-state>span :deep(svg) { width: 20px; height: 20px; }
 .empty-state strong { color: var(--admin-text); font-size: 13px; }
-.empty-state p { margin: 0 0 5px; color: var(--admin-muted); font-size: 11.5px; }
+.empty-state p { margin: 0 0 6px; color: var(--admin-muted); font-size: 11.5px; }
 .pagination { display: flex; justify-content: flex-end; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
 

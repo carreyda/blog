@@ -32,7 +32,7 @@ defineProps<{
 }
 
 .admin-page-header :deep(.admin-eyebrow) {
-  margin: 0 0 5px;
+  margin: 0 0 6px;
   color: var(--admin-accent-text, var(--color-primary));
   font-size: 10.5px;
   font-weight: 680;
@@ -51,7 +51,7 @@ defineProps<{
 
 .admin-page-header :deep(.admin-description) {
   max-width: 640px;
-  margin: 5px 0 0;
+  margin: 6px 0 0;
   color: var(--admin-muted, var(--color-text-secondary));
   font-size: 12.5px;
   line-height: 1.6;

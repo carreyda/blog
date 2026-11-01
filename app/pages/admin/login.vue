@@ -103,7 +103,7 @@ async function submit() {
 }
 
 .login-sub {
-  margin: 9px 0 0;
+  margin: 10px 0 0;
   color: var(--admin-muted);
   font-size: 13px;
 }
