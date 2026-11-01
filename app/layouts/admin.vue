@@ -165,20 +165,6 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="admin">
-    <svg class="icon-sprite" aria-hidden="true" focusable="false">
-      <symbol id="ic-panel" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M9 3v18" /><path d="m16 15-3-3 3-3" /></symbol>
-      <symbol id="ic-panel-open" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M9 3v18" /><path d="m14 9 3 3-3 3" /></symbol>
-      <symbol id="ic-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /><path d="M8 16H3v5" /></symbol>
-      <symbol id="ic-max" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3" /><path d="M21 8V5a2 2 0 0 0-2-2h-3" /><path d="M3 16v3a2 2 0 0 0 2 2h3" /><path d="M16 21h3a2 2 0 0 0 2-2v-3" /></symbol>
-      <symbol id="ic-min" viewBox="0 0 24 24"><path d="M8 3v3a2 2 0 0 1-2 2H3" /><path d="M21 8h-3a2 2 0 0 1-2-2V3" /><path d="M3 16h3a2 2 0 0 1 2 2v3" /><path d="M16 21v-3a2 2 0 0 1 2-2h3" /></symbol>
-      <symbol id="ic-bell" viewBox="0 0 24 24"><path d="M10.268 21a2 2 0 0 0 3.464 0" /><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326" /></symbol>
-      <symbol id="ic-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" /></symbol>
-      <symbol id="ic-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="m16 17 5-5-5-5" /><path d="M21 12H9" /></symbol>
-      <symbol id="ic-external" viewBox="0 0 24 24"><path d="M15 3h6v6" /><path d="M10 14 21 3" /><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /></symbol>
-      <symbol id="ic-plus" viewBox="0 0 24 24"><path d="M5 12h14" /><path d="M12 5v14" /></symbol>
-      <symbol id="ic-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" /></symbol>
-      <symbol id="ic-palette" viewBox="0 0 24 24"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor" /><circle cx="17.5" cy="10.5" r=".5" fill="currentColor" /><circle cx="8.5" cy="7.5" r=".5" fill="currentColor" /><circle cx="6.5" cy="12.5" r=".5" fill="currentColor" /><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z" /></symbol>
-    </svg>
 
     <aside class="admin-side" :class="{ 'is-collapsed': collapsed, 'is-open': mobileOpen }">
       <div class="side-head">
@@ -224,7 +210,7 @@ onBeforeUnmount(() => {
 
       <div class="side-foot">
         <NuxtLink to="/" target="_blank" class="nav-item nav-item--ghost" :title="collapsed ? '查看博客' : undefined">
-          <svg class="ic" aria-hidden="true"><use href="#ic-external" /></svg>
+          <SvgoExternalLink class="ic" aria-hidden="true" />
           <span v-if="!collapsed" class="nav-text">查看博客</span>
         </NuxtLink>
       </div>
@@ -235,10 +221,10 @@ onBeforeUnmount(() => {
     <div class="admin-main">
       <header class="admin-topbar">
         <button type="button" class="icon-btn" :aria-label="collapsed ? '展开侧栏' : '收起侧栏'" @click="toggleSidebar">
-          <svg class="ic" aria-hidden="true"><use :href="collapsed ? '#ic-panel-open' : '#ic-panel'" /></svg>
+          <SvgoPanelLeftOpen v-if="collapsed" class="ic" aria-hidden="true" /><SvgoPanelLeft v-else class="ic" aria-hidden="true" />
         </button>
         <button type="button" class="icon-btn" aria-label="刷新页面" @click="refresh">
-          <svg class="ic" aria-hidden="true"><use href="#ic-refresh" /></svg>
+          <SvgoRefresh class="ic" aria-hidden="true" />
         </button>
 
         <nav class="crumb" aria-label="面包屑">
@@ -251,19 +237,19 @@ onBeforeUnmount(() => {
 
         <div ref="menuRoot" class="topbar-right">
           <button type="button" class="icon-btn" :aria-label="isFullscreen ? '退出全屏' : '全屏'" @click="toggleFullscreen">
-            <svg class="ic" aria-hidden="true"><use :href="isFullscreen ? '#ic-min' : '#ic-max'" /></svg>
+            <SvgoMinimize v-if="isFullscreen" class="ic" aria-hidden="true" /><SvgoMaximize v-else class="ic" aria-hidden="true" />
           </button>
 
           <div class="menu-wrap">
             <button type="button" class="icon-btn icon-btn--dot" aria-label="通知" title="通知（即将上线）" @click="closeMenus">
-              <svg class="ic" aria-hidden="true"><use href="#ic-bell" /></svg>
+              <SvgoBell class="ic" aria-hidden="true" />
               <span class="unread-dot" aria-hidden="true" />
             </button>
           </div>
 
           <div class="menu-wrap">
             <button type="button" class="icon-btn" aria-label="主题色" :aria-expanded="openMenu === 'accent'" @click="toggleMenu('accent')">
-              <svg class="ic" aria-hidden="true"><use href="#ic-palette" /></svg>
+              <SvgoPalette class="ic" aria-hidden="true" />
             </button>
             <div v-if="openMenu === 'accent'" class="menu menu--swatches" role="menu">
               <button
@@ -278,7 +264,7 @@ onBeforeUnmount(() => {
               >
                 <span class="swatch-dot" :style="{ background: item.swatch }" />
                 <span class="swatch-label">{{ item.label }}</span>
-                <svg v-if="item.id === currentAccent.id" class="ic swatch-check" aria-hidden="true"><use href="#ic-check" /></svg>
+                <SvgoCheck v-if="item.id === currentAccent.id" class="ic swatch-check" aria-hidden="true" />
               </button>
             </div>
           </div>
@@ -286,7 +272,7 @@ onBeforeUnmount(() => {
           <div class="mode-switch"><ColorModeSwitcher /></div>
 
           <NuxtLink v-if="showNewPost" to="/admin/posts/new" class="btn-primary">
-            <svg class="ic" aria-hidden="true"><use href="#ic-plus" /></svg>
+            <SvgoPlus class="ic" aria-hidden="true" />
             <span>新建文章</span>
           </NuxtLink>
 
@@ -299,16 +285,16 @@ onBeforeUnmount(() => {
                 <template v-else>{{ avatarLetter }}</template>
               </span>
               <span class="account-name">{{ displayName }}</span>
-              <svg class="ic ic--sm" aria-hidden="true"><use href="#ic-chevron" /></svg>
+              <SvgoChevronDown class="ic ic--sm" aria-hidden="true" />
             </button>
             <div v-if="openMenu === 'account'" class="menu" role="menu">
               <NuxtLink to="/" target="_blank" class="menu-item" role="menuitem" @click="closeMenus">
-                <svg class="ic ic--sm" aria-hidden="true"><use href="#ic-external" /></svg>
+                <SvgoExternalLink class="ic ic--sm" aria-hidden="true" />
                 <span>查看博客</span>
               </NuxtLink>
               <div class="menu-sep" role="separator" />
               <button type="button" class="menu-item menu-item--danger" role="menuitem" @click="logout">
-                <svg class="ic ic--sm" aria-hidden="true"><use href="#ic-logout" /></svg>
+                <SvgoLogOut class="ic ic--sm" aria-hidden="true" />
                 <span>退出登录</span>
               </button>
             </div>
@@ -333,13 +319,6 @@ onBeforeUnmount(() => {
   color: var(--admin-body);
   font-family: var(--admin-font);
   -webkit-font-smoothing: antialiased;
-}
-
-.icon-sprite {
-  position: absolute;
-  width: 0;
-  height: 0;
-  overflow: hidden;
 }
 
 .ic {
@@ -405,7 +384,7 @@ onBeforeUnmount(() => {
   border-radius: 10px;
   background: var(--admin-accent);
   color: var(--admin-accent-contrast);
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: .01em;
 }
@@ -420,7 +399,7 @@ onBeforeUnmount(() => {
 .brand-text strong {
   overflow: hidden;
   color: var(--admin-text);
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -428,7 +407,7 @@ onBeforeUnmount(() => {
 
 .brand-text small {
   color: var(--admin-muted);
-  font-size: 10.5px;
+  font-size: 10px;
   letter-spacing: .02em;
 }
 
@@ -472,7 +451,7 @@ onBeforeUnmount(() => {
   padding: 0 12px;
   border-radius: var(--admin-radius);
   color: var(--admin-body);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   text-decoration: none;
   transition: background var(--admin-duration-fast) var(--admin-ease), color var(--admin-duration-fast) var(--admin-ease);
@@ -596,7 +575,7 @@ onBeforeUnmount(() => {
   gap: 8px;
   margin-left: 6px;
   color: var(--admin-muted);
-  font-size: 12.5px;
+  font-size: 12px;
   white-space: nowrap;
 }
 
@@ -654,7 +633,7 @@ onBeforeUnmount(() => {
   border-radius: var(--admin-radius);
   background: var(--admin-accent);
   color: var(--admin-accent-contrast);
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 600;
   text-decoration: none;
   transition: background var(--admin-duration-fast) var(--admin-ease);
@@ -703,7 +682,7 @@ onBeforeUnmount(() => {
   border-radius: 50%;
   background: var(--admin-avatar-bg);
   color: #fff;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -717,7 +696,7 @@ onBeforeUnmount(() => {
   max-width: 120px;
   overflow: hidden;
   color: var(--admin-text);
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -807,7 +786,7 @@ onBeforeUnmount(() => {
   background: transparent;
   color: var(--admin-body);
   font-family: inherit;
-  font-size: 12.5px;
+  font-size: 12px;
   text-decoration: none;
   cursor: pointer;
   transition: background var(--admin-duration-fast) var(--admin-ease), color var(--admin-duration-fast) var(--admin-ease);

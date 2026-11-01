@@ -107,7 +107,7 @@ const year = new Date().getFullYear()
   border-radius: 10px;
   background: var(--admin-accent);
   color: var(--admin-accent-contrast);
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 700;
 }
 
@@ -171,7 +171,7 @@ const year = new Date().getFullYear()
   border-radius: 6px;
   background: var(--admin-surface);
   color: var(--admin-muted);
-  font-size: 10.5px;
+  font-size: 10px;
   font-style: normal;
   letter-spacing: .01em;
 }
@@ -208,7 +208,7 @@ const year = new Date().getFullYear()
   border-top: 1px solid var(--admin-border);
   background: var(--admin-surface-2);
   color: var(--admin-faint);
-  font-size: 10.5px;
+  font-size: 10px;
 }
 
 .chip {
@@ -219,7 +219,7 @@ const year = new Date().getFullYear()
   background: var(--admin-surface);
   box-shadow: var(--admin-shadow-sm);
   color: var(--admin-muted);
-  font-size: 11px;
+  font-size: 12px;
   white-space: nowrap;
 }
 
@@ -242,7 +242,7 @@ const year = new Date().getFullYear()
   display: block;
   margin-bottom: 12px;
   color: var(--admin-accent-text);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: .18em;
 }
@@ -260,7 +260,7 @@ const year = new Date().getFullYear()
   max-width: 34em;
   margin: 12px 0 0;
   color: var(--admin-muted);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.7;
 }
 
@@ -294,7 +294,7 @@ const year = new Date().getFullYear()
   bottom: 24px;
   margin: 0;
   color: var(--admin-faint);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: .01em;
 }
 

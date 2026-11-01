@@ -423,14 +423,14 @@ function markIconBroken(id: number) {
 
 .card-heading strong,.list-heading strong {
   display: block;
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 680;
 }
 
 .card-heading p,.list-heading p {
   margin: 4px 0 0;
   color: var(--color-text-muted);
-  font-size: 10.5px;
+  font-size: 10px;
 }
 
 .inline-editor {
@@ -451,7 +451,7 @@ function markIconBroken(id: number) {
 }
 
 .editor-title strong {
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 680;
 }
 
@@ -517,12 +517,12 @@ function markIconBroken(id: number) {
 }
 
 .visibility-toggle strong {
-  font-size: 11.5px;
+  font-size: 12px;
 }
 
 .visibility-toggle small {
   color: var(--color-text-muted);
-  font-size: 9.5px;
+  font-size: 10px;
 }
 
 .list-heading {
@@ -563,12 +563,12 @@ function markIconBroken(id: number) {
 }
 
 .category-row.is-root strong {
-  font-size: 12.5px;
+  font-size: 12px;
 }
 
 .category-row small {
   color: var(--color-text-muted);
-  font-size: 9.5px;
+  font-size: 10px;
 }
 
 .category-icon {
@@ -657,7 +657,7 @@ function markIconBroken(id: number) {
   margin: 6px 0 0;
   color: var(--color-text-secondary);
   overflow: hidden;
-  font-size: 10.5px;
+  font-size: 10px;
   line-height: 1.5;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -674,7 +674,7 @@ function markIconBroken(id: number) {
 
 .bookmark-info small {
   color: var(--color-text-muted);
-  font-size: 9.5px;
+  font-size: 10px;
   overflow-wrap: anywhere;
 }
 
@@ -686,7 +686,7 @@ function markIconBroken(id: number) {
   gap: 6px;
   overflow: hidden;
   color: var(--color-primary);
-  font-size: 9.5px;
+  font-size: 10px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

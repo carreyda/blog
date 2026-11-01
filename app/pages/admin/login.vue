@@ -88,7 +88,7 @@ async function submit() {
 .login-kicker {
   margin: 0;
   color: var(--admin-accent-text);
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: .16em;
 }
@@ -105,7 +105,7 @@ async function submit() {
 .login-sub {
   margin: 10px 0 0;
   color: var(--admin-muted);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .login-card {
@@ -120,7 +120,7 @@ async function submit() {
 
 .login-card :deep(label) {
   color: var(--admin-body);
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -132,7 +132,7 @@ async function submit() {
   height: 42px;
   margin-top: 2px;
   border-radius: var(--admin-radius);
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 600;
 }
 

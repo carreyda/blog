@@ -183,7 +183,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
 
 .card-heading h2 {
   margin: 0;
-  font-size: 15px;
+  font-size: 14px;
 }
 
 .card-heading p {
@@ -206,7 +206,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
   display: block;
   margin-top: 4px;
   color: var(--color-text-secondary);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .editor-actions {
@@ -222,7 +222,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
   justify-content: center;
   gap: 9px;
   color: var(--color-text-secondary);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .loading-icon {
@@ -230,7 +230,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
 }
 
 .side-heading {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
 }
 
@@ -255,7 +255,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
 .publish-state p {
   margin: 3px 0 0;
   color: var(--color-text-secondary);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .status-dot {
@@ -337,7 +337,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
 
 .empty-tags p {
   margin: 0;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .cover-preview {

@@ -1,7 +1,24 @@
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
-  modules: ['@nuxt/ui'],
+  modules: ['@nuxt/ui', 'nuxt-svgo'],
+  svgo: {
+    autoImportPath: '~/assets/icons',
+    componentPrefix: 'svgo',
+    global: false,
+    dts: true,
+    // Import the raw svg component: the default 'componentext' wrapper forces
+    // fill: currentColor, which turns these stroke icons into solid blobs.
+    defaultImport: 'component',
+    // The icons are stroke-only and inherit currentColor, so keep the original
+    // fill/stroke attributes instead of letting preset-default strip them.
+    svgoConfig: {
+      plugins: [
+        { name: 'preset-default', params: { overrides: { removeUselessStrokeAndFill: false } } },
+        'removeDimensions',
+      ],
+    },
+  },
   ui: {
     fonts: false,
   },

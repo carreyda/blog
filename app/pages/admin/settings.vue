@@ -137,7 +137,7 @@ async function save() {
 
 .section-heading h2 {
   margin: 0;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
 }
 
@@ -184,7 +184,7 @@ async function save() {
 
 .about-editor {
   font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.7;
 }
 
@@ -195,7 +195,7 @@ async function save() {
   justify-content: center;
   gap: 8px;
   color: var(--color-text-secondary);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .brand-preview {
@@ -226,13 +226,13 @@ async function save() {
 
 .brand-preview strong,.profile-preview strong {
   display: block;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .brand-preview p,.profile-preview p {
   margin: 4px 0 0;
   color: var(--color-text-secondary);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.45;
 }
 

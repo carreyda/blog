@@ -98,8 +98,8 @@ async function remove(tag: Tag) {
 .card-title { display: flex; align-items: center; gap: 12px; }
 .title-icon { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 10px; background: color-mix(in srgb, var(--color-primary) 10%, transparent); color: var(--color-primary); }
 .title-icon :deep(svg) { width: 16px; height: 16px; }
-.card-title strong, .list-heading strong { display: block; font-size: 13.5px; font-weight: 650; }
-.card-title p, .list-heading p { margin: 4px 0 0; color: var(--color-text-muted); font-size: 10.5px; }
+.card-title strong, .list-heading strong { display: block; font-size: 14px; font-weight: 650; }
+.card-title p, .list-heading p { margin: 4px 0 0; color: var(--color-text-muted); font-size: 10px; }
 .tag-form { display: grid; gap: 20px; }
 .buttons { display: flex; gap: 8px; padding-top: 2px; }
 .list-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
@@ -111,14 +111,14 @@ async function remove(tag: Tag) {
 .tag-info { display: flex; min-width: 0; align-items: center; gap: 12px; }
 .hash { display: grid; width: 34px; height: 34px; flex: 0 0 auto; place-items: center; border: 1px solid var(--color-border); border-radius: 10px; color: var(--color-primary); font-size: 14px; font-weight: 700; }
 .tag-info>span:last-child { display: grid; min-width: 0; gap: 4px; }
-.tag-info strong { overflow: hidden; font-size: 12.5px; font-weight: 620; text-overflow: ellipsis; white-space: nowrap; }
+.tag-info strong { overflow: hidden; font-size: 12px; font-weight: 620; text-overflow: ellipsis; white-space: nowrap; }
 .tag-info code { overflow: hidden; color: var(--color-text-muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
-.post-count { color: var(--color-text-secondary); font-size: 11.5px; }
+.post-count { color: var(--color-text-secondary); font-size: 12px; }
 .row-actions { display: flex; justify-content: flex-end; gap: 2px; }
 .empty-state { display: grid; min-height: 300px; place-items: center; align-content: center; gap: 8px; text-align: center; }
 .empty-state>svg { width: 24px; height: 24px; margin-bottom: 4px; color: var(--color-text-muted); }
-.empty-state strong { font-size: 13px; }
-.empty-state p { margin: 0; color: var(--color-text-muted); font-size: 11px; }
+.empty-state strong { font-size: 14px; }
+.empty-state p { margin: 0; color: var(--color-text-muted); font-size: 12px; }
 
 @media (max-width: 980px) { .tags-layout { grid-template-columns: 1fr; } .form-card { position: static; } }
 @media (max-width: 600px) { .tag-list-head { display: none; } .tag-row { grid-template-columns: 1fr auto; } .post-count { display: none; } }

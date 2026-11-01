@@ -284,7 +284,7 @@ const chart = computed(() => {
 
 .dash-head { padding: 4px 2px 6px; }
 .dash-head h1 { margin: 0; color: var(--admin-text); font-size: 20px; font-weight: 680; letter-spacing: -.02em; }
-.dash-head p { margin: 6px 0 0; color: var(--admin-muted); font-size: 12.5px; }
+.dash-head p { margin: 6px 0 0; color: var(--admin-muted); font-size: 12px; }
 
 /* ------------------------------------------------------------- metric cards */
 .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
@@ -309,8 +309,8 @@ const chart = computed(() => {
 
 .metric-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
 .metric-labels { display: grid; gap: 2px; min-width: 0; }
-.metric-eyebrow { color: var(--admin-muted); font-size: 11px; line-height: 1.2; }
-.metric-title { color: var(--admin-body); font-size: 12.5px; font-weight: 600; line-height: 1.3; }
+.metric-eyebrow { color: var(--admin-muted); font-size: 12px; line-height: 1.2; }
+.metric-title { color: var(--admin-body); font-size: 12px; font-weight: 600; line-height: 1.3; }
 
 .metric-icon {
   display: grid;
@@ -326,8 +326,8 @@ const chart = computed(() => {
 .metric-icon :deep(svg) { width: 16px; height: 16px; }
 .metric-icon--warn { border-color: color-mix(in oklab, var(--admin-warning) 22%, transparent); background: color-mix(in oklab, var(--admin-warning) 10%, transparent); color: var(--admin-warning); }
 
-.metric-value { color: var(--admin-text); font-size: 29px; font-weight: 680; letter-spacing: -.03em; line-height: 1.05; font-variant-numeric: tabular-nums; }
-.metric-meta { margin: 0; display: flex; align-items: center; gap: 6px; color: var(--admin-muted); font-size: 11.5px; }
+.metric-value { color: var(--admin-text); font-size: 30px; font-weight: 680; letter-spacing: -.03em; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.metric-meta { margin: 0; display: flex; align-items: center; gap: 6px; color: var(--admin-muted); font-size: 12px; }
 .trend { font-weight: 640; font-variant-numeric: tabular-nums; }
 .trend--up { color: var(--admin-success); }
 
@@ -357,12 +357,12 @@ const chart = computed(() => {
 }
 .panel-icon :deep(svg) { width: 14px; height: 14px; }
 .panel-titles { min-width: 0; }
-.panel-titles h2 { margin: 0; color: var(--admin-text); font-size: 13.5px; font-weight: 640; line-height: 1.3; }
-.panel-titles p { margin: 2px 0 0; color: var(--admin-muted); font-size: 11.5px; }
-.panel-link { margin-left: auto; color: var(--admin-muted); font-size: 11.5px; text-decoration: none; white-space: nowrap; }
+.panel-titles h2 { margin: 0; color: var(--admin-text); font-size: 14px; font-weight: 640; line-height: 1.3; }
+.panel-titles p { margin: 2px 0 0; color: var(--admin-muted); font-size: 12px; }
+.panel-link { margin-left: auto; color: var(--admin-muted); font-size: 12px; text-decoration: none; white-space: nowrap; }
 .panel-link:hover { color: var(--admin-accent-text); }
 
-.chip { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; padding: 4px 8px; border: 1px solid var(--admin-border); border-radius: 1000px; color: var(--admin-muted); font-size: 10.5px; white-space: nowrap; }
+.chip { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; padding: 4px 8px; border: 1px solid var(--admin-border); border-radius: 1000px; color: var(--admin-muted); font-size: 10px; white-space: nowrap; }
 .chip :deep(svg) { width: 12px; height: 12px; }
 
 .chart-body { flex: 1; padding: 10px 14px 6px; }
@@ -377,15 +377,15 @@ const chart = computed(() => {
 .feed-item:hover { background: var(--admin-hover); }
 .feed-icon { display: grid; width: 24px; height: 24px; flex: none; place-items: center; border: 1px solid var(--admin-border); border-radius: 6px; color: var(--admin-muted); }
 .feed-icon :deep(svg) { width: 12px; height: 12px; }
-.feed-title { flex: 1; min-width: 0; overflow: hidden; color: var(--admin-body); font-size: 12.5px; text-overflow: ellipsis; white-space: nowrap; }
+.feed-title { flex: 1; min-width: 0; overflow: hidden; color: var(--admin-body); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .feed-item:hover .feed-title { color: var(--admin-accent-text); }
-.feed-item time { flex: none; color: var(--admin-faint); font-size: 11px; }
+.feed-item time { flex: none; color: var(--admin-faint); font-size: 12px; }
 
 /* -------------------------------------------------------------------- table */
 .table-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; }
-th { padding: 10px 16px; border-bottom: 1px solid var(--admin-border); color: var(--admin-muted); font-size: 11px; font-weight: 600; text-align: left; white-space: nowrap; }
-td { padding: 12px 16px; border-bottom: 1px solid var(--admin-border); color: var(--admin-body); font-size: 12.5px; white-space: nowrap; }
+th { padding: 10px 16px; border-bottom: 1px solid var(--admin-border); color: var(--admin-muted); font-size: 12px; font-weight: 600; text-align: left; white-space: nowrap; }
+td { padding: 12px 16px; border-bottom: 1px solid var(--admin-border); color: var(--admin-body); font-size: 12px; white-space: nowrap; }
 tbody tr:last-child td { border-bottom: 0; }
 tbody tr:hover { background: var(--admin-hover); }
 th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
@@ -394,19 +394,19 @@ th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
 .cell-title a:hover { color: var(--admin-accent-text); }
 .cell-time { color: var(--admin-muted); }
 
-.panel-empty { display: grid; gap: 8px; padding: 26px 16px; justify-items: center; color: var(--admin-muted); font-size: 12.5px; text-align: center; }
+.panel-empty { display: grid; gap: 8px; padding: 26px 16px; justify-items: center; color: var(--admin-muted); font-size: 12px; text-align: center; }
 .btn-inline { padding: 6px 10px; border: 1px solid var(--admin-border); border-radius: 6px; color: var(--admin-body); font-size: 12px; text-decoration: none; }
 .btn-inline:hover { border-color: var(--admin-border-strong); }
 
 /* --------------------------------------------------------------------- bars */
 .bars { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 24px; padding: 14px 16px 16px; }
 .bar-row { display: grid; gap: 6px; }
-.bar-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; color: var(--admin-muted); font-size: 11.5px; }
-.bar-head strong { color: var(--admin-text); font-size: 12.5px; font-weight: 640; font-variant-numeric: tabular-nums; }
+.bar-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; color: var(--admin-muted); font-size: 12px; }
+.bar-head strong { color: var(--admin-text); font-size: 12px; font-weight: 640; font-variant-numeric: tabular-nums; }
 .bar-track { height: 6px; overflow: hidden; border-radius: 1000px; background: var(--admin-border); }
 .bar-fill { display: block; height: 100%; border-radius: inherit; background: var(--admin-accent); transition: width var(--admin-duration) var(--admin-ease); }
 .bar-fill--warn { background: color-mix(in oklab, var(--admin-warning) 78%, transparent); }
-.bar-note { margin: 0; color: var(--admin-faint); font-size: 10.5px; }
+.bar-note { margin: 0; color: var(--admin-faint); font-size: 10px; }
 
 @media (max-width: 1180px) {
   .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }

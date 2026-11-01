@@ -34,7 +34,7 @@ defineProps<{
 .admin-page-header :deep(.admin-eyebrow) {
   margin: 0 0 6px;
   color: var(--admin-accent-text, var(--color-primary));
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 680;
   letter-spacing: .11em;
   text-transform: uppercase;
@@ -53,7 +53,7 @@ defineProps<{
   max-width: 640px;
   margin: 6px 0 0;
   color: var(--admin-muted, var(--color-text-secondary));
-  font-size: 12.5px;
+  font-size: 12px;
   line-height: 1.6;
 }
 
