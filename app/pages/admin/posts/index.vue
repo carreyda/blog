@@ -1,8 +1,11 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 definePageMeta({ layout: 'admin' })
 useSeoMeta({ title: '文章管理' })
 
-type Post = { id: number; title: string; status: 'PUBLISHED' | 'ARCHIVED'; viewCount: number; publishedAt: string; updatedAt: string; tags: { id: number; name: string }[] }
+type Post = { id: number; title: string; status: 'PUBLISHED' | 'ARCHIVED'; viewCount: number; publishedAt: string; createdAt: string; updatedAt: string; tags: { id: number; name: string }[] }
+type SortField = 'title' | 'viewCount' | 'createdAt' | 'updatedAt'
+type SortOrder = 'asc' | 'desc'
+
 const session = useState<{ csrfToken: string } | null>('admin-session')
 const { notifySuccess, notifyError } = useAdminFeedback()
 const { confirm } = useAdminConfirm()
@@ -10,16 +13,47 @@ const deletingId = ref<number | null>(null)
 const search = ref('')
 const status = ref('ALL')
 const page = ref(1)
+const sort = ref<SortField>('updatedAt')
+const order = ref<SortOrder>('desc')
 const statusItems = [
   { label: '全部状态', value: 'ALL' },
   { label: '已发布', value: 'PUBLISHED' },
   { label: '已归档', value: 'ARCHIVED' },
 ]
-const query = computed(() => ({ page: page.value, pageSize: 20, q: search.value || undefined, status: status.value === 'ALL' ? undefined : status.value }))
+const query = computed(() => ({
+  page: page.value,
+  pageSize: 20,
+  q: search.value || undefined,
+  status: status.value === 'ALL' ? undefined : status.value,
+  sort: sort.value,
+  order: order.value,
+}))
 const { data: response, pending, refresh } = await useFetch<{ data: { items: Post[]; total: number; pageSize: number } }>('/api/admin/posts', { query })
 const posts = computed(() => response.value?.data.items || [])
 const total = computed(() => response.value?.data.total || 0)
 const formatDate = (value: string) => new Date(value).toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' })
+
+// Text sorts start at A, dates and counts start at the newest/largest.
+const DEFAULT_ORDER: Record<SortField, SortOrder> = { title: 'asc', viewCount: 'desc', createdAt: 'desc', updatedAt: 'desc' }
+
+function toggleSort(field: SortField) {
+  if (sort.value === field) {
+    order.value = order.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    sort.value = field
+    order.value = DEFAULT_ORDER[field]
+  }
+}
+
+function sortIcon(field: SortField) {
+  if (sort.value !== field) return 'i-lucide-arrow-up-down'
+  return order.value === 'asc' ? 'i-lucide-arrow-up' : 'i-lucide-arrow-down'
+}
+
+function ariaSort(field: SortField) {
+  if (sort.value !== field) return 'none'
+  return order.value === 'asc' ? 'ascending' : 'descending'
+}
 
 watch([search, status], () => { page.value = 1 })
 
@@ -65,7 +99,36 @@ async function remove(post: Post) {
       </div>
       <div v-else class="table-scroll">
         <table>
-          <thead><tr><th>文章</th><th>状态</th><th>浏览量</th><th>更新时间</th><th><span class="sr-only">操作</span></th></tr></thead>
+          <thead>
+            <tr>
+              <th :aria-sort="ariaSort('title')">
+                <button type="button" class="th-sort" :class="{ 'is-active': sort === 'title' }" @click="toggleSort('title')">
+                  文章
+                  <UIcon :name="sortIcon('title')" class="sort-icon" />
+                </button>
+              </th>
+              <th>状态</th>
+              <th :aria-sort="ariaSort('viewCount')" class="col-num">
+                <button type="button" class="th-sort" :class="{ 'is-active': sort === 'viewCount' }" @click="toggleSort('viewCount')">
+                  浏览量
+                  <UIcon :name="sortIcon('viewCount')" class="sort-icon" />
+                </button>
+              </th>
+              <th :aria-sort="ariaSort('updatedAt')">
+                <button type="button" class="th-sort" :class="{ 'is-active': sort === 'updatedAt' }" @click="toggleSort('updatedAt')">
+                  更新时间
+                  <UIcon :name="sortIcon('updatedAt')" class="sort-icon" />
+                </button>
+              </th>
+              <th :aria-sort="ariaSort('createdAt')">
+                <button type="button" class="th-sort" :class="{ 'is-active': sort === 'createdAt' }" @click="toggleSort('createdAt')">
+                  创建时间
+                  <UIcon :name="sortIcon('createdAt')" class="sort-icon" />
+                </button>
+              </th>
+              <th><span class="sr-only">操作</span></th>
+            </tr>
+          </thead>
           <tbody>
             <tr v-for="post in posts" :key="post.id">
               <td>
@@ -73,8 +136,9 @@ async function remove(post: Post) {
                 <div class="post-tags"><span v-for="tag in post.tags" :key="tag.id">{{ tag.name }}</span><span v-if="!post.tags.length">无标签</span></div>
               </td>
               <td><UBadge :color="post.status === 'PUBLISHED' ? 'success' : 'neutral'" variant="subtle" size="sm">{{ post.status === 'PUBLISHED' ? '已发布' : '已归档' }}</UBadge></td>
-              <td><span class="metric"><UIcon name="i-lucide-eye" />{{ post.viewCount.toLocaleString('zh-CN') }}</span></td>
+              <td class="col-num"><span class="metric"><UIcon name="i-lucide-eye" />{{ post.viewCount.toLocaleString('zh-CN') }}</span></td>
               <td class="cell-time">{{ formatDate(post.updatedAt) }}</td>
+              <td class="cell-time">{{ formatDate(post.createdAt) }}</td>
               <td>
                 <div class="row-actions">
                   <UButton :to="`/admin/posts/${post.id}/edit`" icon="i-lucide-pencil" color="neutral" variant="ghost" square size="xs" :aria-label="`编辑 ${post.title}`" />
@@ -102,10 +166,33 @@ async function remove(post: Post) {
 .result-count { margin-left: auto; color: var(--admin-muted); font-size: 12px; white-space: nowrap; }
 
 .table-scroll { width: 100%; overflow-x: auto; }
-table { width: 100%; min-width: 760px; border-collapse: collapse; }
-th { padding: 10px 16px; border-bottom: 1px solid var(--admin-border); color: var(--admin-muted); font-size: 12px; font-weight: 600; text-align: left; white-space: nowrap; }
+table { width: 100%; min-width: 880px; border-collapse: collapse; }
+th { padding: 0 16px; border-bottom: 1px solid var(--admin-border); color: var(--admin-muted); font-size: 12px; font-weight: 600; text-align: left; white-space: nowrap; }
 th:last-child { width: 76px; }
 td { padding: 12px 16px; border-bottom: 1px solid var(--admin-border); color: var(--admin-body); font-size: 12px; vertical-align: middle; white-space: nowrap; }
+.col-num { text-align: right; }
+.col-num .th-sort { justify-content: flex-end; }
+td.col-num .metric { width: 100%; justify-content: flex-end; }
+
+.th-sort {
+  display: inline-flex;
+  width: 100%;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: color var(--admin-duration-fast) var(--admin-ease);
+}
+.th-sort:hover { color: var(--admin-text); }
+.th-sort.is-active { color: var(--admin-text); }
+.sort-icon { width: 12px; height: 12px; flex: none; opacity: .4; transition: opacity var(--admin-duration-fast) var(--admin-ease); }
+.th-sort.is-active .sort-icon { color: var(--admin-accent-text); opacity: 1; }
 tbody tr:last-child td { border-bottom: 0; }
 tbody tr:hover { background: var(--admin-hover); }
 td:first-child { width: 100%; white-space: normal; }
