@@ -170,7 +170,10 @@ onBeforeUnmount(() => {
     <aside class="admin-side" :class="{ 'is-collapsed': collapsed, 'is-open': mobileOpen }">
       <div class="side-head">
         <NuxtLink to="/admin" class="brand" @click="mobileOpen = false">
-          <span class="brand-mark">CB</span>
+          <span class="brand-mark">
+            <img v-if="avatarUrl && !avatarBroken" :src="avatarUrl" :alt="displayName" @error="avatarBroken = true">
+            <template v-else>CB</template>
+          </span>
           <span v-if="!collapsed" class="brand-text">
             <strong>Carreyda Blog</strong>
             <small>内容工作台</small>
@@ -377,17 +380,31 @@ onBeforeUnmount(() => {
 }
 
 .brand-mark {
+  position: relative;
   display: grid;
+  overflow: hidden;
   flex: 0 0 auto;
   width: 30px;
   height: 30px;
+  min-width: 30px;
   place-items: center;
+  /* The public site slants its // Blog lockup with the same class name. */
+  transform: none;
   border-radius: 10px;
   background: var(--admin-accent);
+  box-shadow: 0 0 0 1px var(--admin-border);
   color: var(--admin-accent-contrast);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: .01em;
+}
+
+.brand-mark img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .brand-text {
