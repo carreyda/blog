@@ -100,7 +100,13 @@ useSeoMeta({
   padding: 4px 0 4px 18px;
   border-left: 1px solid var(--color-border);
   overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
   font-size: 12px;
+}
+
+.toc::-webkit-scrollbar {
+  display: none;
 }
 
 .toc strong {
