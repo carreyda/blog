@@ -41,36 +41,5 @@ export default defineEventHandler(async (event) => {
     }),
   ])
 
-  const categoryById = new Map(categories.map(category => [category.id, category]))
-  const pathCache = new Map<number, string>()
-  function categoryPath(categoryId: number): string {
-    const cached = pathCache.get(categoryId)
-    if (cached) return cached
-
-    const names: string[] = []
-    const visited = new Set<number>()
-    let cursor: number | null = categoryId
-    while (cursor !== null) {
-      if (visited.has(cursor)) {
-        names.unshift('未分类')
-        break
-      }
-      visited.add(cursor)
-      const category = categoryById.get(cursor)
-      if (!category) {
-        names.unshift('未分类')
-        break
-      }
-      names.unshift(category.name)
-      cursor = category.parentId
-    }
-
-    const path = names.join(' / ')
-    pathCache.set(categoryId, path)
-    return path
-  }
-
-  return {
-    data: bookmarks.map(bookmark => ({ ...bookmark, categoryPath: categoryPath(bookmark.categoryId) })),
-  }
+  return { data: withCategoryPaths(bookmarks, categories) }
 })
