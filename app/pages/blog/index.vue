@@ -129,7 +129,6 @@ function tagLink(slug?: string) {
   padding-right: 4px;
   overflow-y: auto;
   overscroll-behavior: contain;
-  scrollbar-width: thin;
 }
 
 .blog-sidebar h1 {

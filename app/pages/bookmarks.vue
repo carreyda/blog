@@ -123,7 +123,6 @@ useSeoMeta({ title: '收藏', description: '按分类整理的实用网站、开
   padding-right: 4px;
   overflow-y: auto;
   overscroll-behavior: contain;
-  scrollbar-width: thin;
 }
 
 .bookmarks-sidebar h1 {
