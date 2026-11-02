@@ -779,6 +779,8 @@ async function onDrop(event: DragEvent): Promise<void> {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+  /* Keeps the panel height stable when the selection actions replace the hint. */
+  min-height: 24px;
   color: var(--admin-muted);
   font-size: 11.5px;
 }
@@ -955,7 +957,9 @@ async function onDrop(event: DragEvent): Promise<void> {
 }
 
 .select-check.is-inline {
-  position: static;
+  /* Must stay a containing block: `.select-input` is absolutely positioned and
+     would otherwise stretch across the whole page, stacking every row's hit area. */
+  position: relative;
   display: inline-flex;
   opacity: 1;
 }
