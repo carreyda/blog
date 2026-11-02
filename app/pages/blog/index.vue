@@ -89,12 +89,12 @@ function tagLink(slug?: string) {
           <NuxtLink :to="`/blog/${post.id}`" :class="['post-link', { 'has-cover': post.coverImageUrl }]">
             <img v-if="post.coverImageUrl" :src="post.coverImageUrl" :alt="post.title" loading="lazy">
             <div>
+              <h2>{{ post.title }}</h2>
               <div class="post-meta">
                 <time :datetime="post.publishedAt">{{ new Date(post.publishedAt).toLocaleDateString('zh-CN') }}</time>
                 <span>·</span>
                 <span>{{ post.readingMinutes }} 分钟阅读</span>
               </div>
-              <h2>{{ post.title }}</h2>
               <p>{{ post.summary }}</p>
             </div>
           </NuxtLink>
@@ -339,12 +339,13 @@ function tagLink(slug?: string) {
 .post-meta {
   display: flex;
   gap: 8px;
+  margin-bottom: 8px;
   color: var(--color-text-secondary);
   font-size: 11px;
 }
 
 .post-card h2 {
-  margin: 8px 0;
+  margin: 0 0 6px;
   font-size: 21px;
   letter-spacing: -.025em;
   transition: color .15s ease;
