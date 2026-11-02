@@ -159,14 +159,30 @@ async function remove(post: Post) {
 .posts-page { display: grid; gap: 12px; }
 
 .panel { overflow: hidden; border: 1px solid var(--admin-border); border-radius: var(--admin-radius); background: var(--admin-surface); }
-.toolbar-panel { padding: 12px 14px; }
+
+/* Pin the filter bar under the sticky topbar, and keep the column header on
+   screen while the rows scroll inside the panel. */
+.toolbar-panel {
+  position: sticky;
+  top: var(--admin-header-height);
+  z-index: 6;
+  padding: 12px 14px;
+  box-shadow: 0 6px 12px -12px rgb(0 0 0 / 40%);
+}
 .toolbar { display: flex; align-items: center; gap: 10px; }
 .search-input { width: min(100%, 360px); }
 .status-select { width: 136px; }
 .result-count { margin-left: auto; color: var(--admin-muted); font-size: 12px; white-space: nowrap; }
 
-.table-scroll { width: 100%; overflow-x: auto; }
-table { width: 100%; min-width: 880px; border-collapse: collapse; }
+.table-scroll { width: 100%; overflow: auto; max-height: calc(100vh - var(--admin-header-height) - 220px); }
+table { width: 100%; min-width: 880px; border-collapse: separate; border-spacing: 0; }
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--admin-surface);
+  box-shadow: inset 0 -1px 0 var(--admin-border), 0 6px 8px -8px rgb(0 0 0 / 45%);
+}
 th { padding: 0 16px; border-bottom: 1px solid var(--admin-border); color: var(--admin-muted); font-size: 12px; font-weight: 600; text-align: left; white-space: nowrap; }
 th:last-child { width: 76px; }
 td { padding: 12px 16px; border-bottom: 1px solid var(--admin-border); color: var(--admin-body); font-size: 12px; vertical-align: middle; white-space: nowrap; }
