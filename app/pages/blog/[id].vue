@@ -2,10 +2,38 @@
 type Tag = { id: number; name: string; slug: string }
 type TocItem = { id: string; text: string; level: number }
 type Post = { id: number; title: string; summary: string; coverImageUrl: string | null; publishedAt: string; updatedAt: string; readingMinutes: number; tags: Tag[]; seoTitle: string | null; seoDescription: string | null; contentHtml: string; toc: TocItem[] }
+type RelatedPost = { id: number; title: string; publishedAt: string; readingMinutes: number }
 const route = useRoute()
 const { data: response, error } = await useFetch<{ data: Post }>(`/api/posts/${route.params.id}`)
 if (error.value || !response.value?.data) throw createError({ statusCode: error.value?.statusCode || 404, statusMessage: '文章不存在或已下线' })
 const post = computed(() => response.value!.data)
+
+const { data: relatedResponse } = await useFetch<{ data: { items: RelatedPost[] } }>('/api/posts', {
+  query: { page: 1, pageSize: 6 },
+})
+const related = computed(() => (relatedResponse.value?.data.items || [])
+  .filter(item => item.id !== post.value.id)
+  .slice(0, 4))
+
+const hasSide = computed(() => post.value.toc.length > 0 || related.value.length > 0)
+
+const isFullscreen = ref(false)
+const tocOpen = ref(true)
+
+function syncFullscreen(): void {
+  isFullscreen.value = Boolean(document.fullscreenElement)
+}
+async function toggleFullscreen(): Promise<void> {
+  if (document.fullscreenElement) await document.exitFullscreen()
+  else await document.documentElement.requestFullscreen().catch(() => {})
+}
+onMounted(() => document.addEventListener('fullscreenchange', syncFullscreen))
+onBeforeUnmount(() => document.removeEventListener('fullscreenchange', syncFullscreen))
+
+onMounted(() => {
+  tocOpen.value = window.matchMedia('(min-width: 901px)').matches
+})
+
 useSeoMeta({
   title: () => post.value.seoTitle || post.value.title,
   description: () => post.value.seoDescription || post.value.summary,
@@ -17,88 +45,261 @@ useSeoMeta({
 </script>
 
 <template>
-  <article class="article-page" :class="{ 'article-page--with-toc': post.toc.length }">
-    <header class="article-header">
-      <NuxtLink to="/blog" class="back">← 返回文章</NuxtLink>
-      <h1>{{ post.title }}</h1><p class="summary">{{ post.summary }}</p>
-      <div class="meta"><time :datetime="post.publishedAt">发布于 {{ new Date(post.publishedAt).toLocaleDateString('zh-CN') }}</time><span>·</span><span>{{ post.readingMinutes }} 分钟阅读</span></div>
-      <div v-if="post.tags.length" class="tags"><NuxtLink v-for="tag in post.tags" :key="tag.id" :to="`/tags/${tag.slug}`">#{{ tag.name }}</NuxtLink></div>
-      <img v-if="post.coverImageUrl" class="cover" :src="post.coverImageUrl" :alt="post.title">
-    </header>
-    <nav v-if="post.toc.length" class="toc" aria-label="文章目录"><strong>目录</strong><a v-for="item in post.toc" :key="item.id" :href="`#${item.id}`" :style="{ paddingLeft: `${(item.level - 2) * 14}px` }">{{ item.text }}</a></nav>
-    <ArticleImagePreview :html="post.contentHtml" />
-  </article>
+  <div class="article-page" :class="{ 'is-solo': !hasSide }">
+    <aside class="article-rail" aria-label="阅读工具">
+      <button
+        type="button"
+        class="rail-button"
+        :aria-label="isFullscreen ? '退出全屏' : '全屏阅读'"
+        :title="isFullscreen ? '退出全屏' : '全屏阅读'"
+        @click="toggleFullscreen"
+      >
+        <UIcon :name="isFullscreen ? 'i-lucide-minimize-2' : 'i-lucide-maximize-2'" />
+      </button>
+    </aside>
+
+    <article class="article-card">
+      <header class="article-header">
+        <NuxtLink to="/blog" class="back">← 返回文章</NuxtLink>
+        <h1>{{ post.title }}</h1>
+        <div class="meta">
+          <time :datetime="post.publishedAt">{{ new Date(post.publishedAt).toLocaleDateString('zh-CN') }}</time>
+          <span>·</span>
+          <span>{{ post.readingMinutes }} 分钟阅读</span>
+          <template v-if="post.tags.length">
+            <span>·</span>
+            <NuxtLink v-for="tag in post.tags" :key="tag.id" :to="`/tags/${tag.slug}`">#{{ tag.name }}</NuxtLink>
+          </template>
+        </div>
+        <p class="summary">{{ post.summary }}</p>
+        <img v-if="post.coverImageUrl" class="cover" :src="post.coverImageUrl" :alt="post.title">
+      </header>
+
+      <ArticleImagePreview :html="post.contentHtml" />
+    </article>
+
+    <aside class="article-side">
+      <section v-if="post.toc.length" class="side-card">
+        <details :open="tocOpen" class="side-details">
+          <summary class="side-head">
+            <span>目录</span>
+            <span class="side-head-right">
+              <span class="side-count">{{ post.toc.length }}</span>
+              <UIcon name="i-lucide-chevron-down" class="side-caret" />
+            </span>
+          </summary>
+          <nav class="toc" aria-label="文章目录">
+            <a
+              v-for="item in post.toc"
+              :key="item.id"
+              :href="`#${item.id}`"
+              :style="{ paddingLeft: `${(item.level - 2) * 14}px` }"
+            >{{ item.text }}</a>
+          </nav>
+        </details>
+      </section>
+
+      <section v-if="related.length" class="side-card">
+        <div class="side-head side-head--static">
+          <span>相关推荐</span>
+        </div>
+        <div class="related-list">
+          <NuxtLink v-for="item in related" :key="item.id" :to="`/blog/${item.id}`" class="related-item">
+            <span class="related-title">{{ item.title }}</span>
+            <span class="related-meta">{{ item.readingMinutes }} 分钟阅读 · {{ new Date(item.publishedAt).toLocaleDateString('zh-CN') }}</span>
+          </NuxtLink>
+        </div>
+      </section>
+    </aside>
+  </div>
 </template>
 
 <style>
+:root {
+  --article-canvas: #f4f5f6;
+  --article-card: #fff;
+}
+
+html.dark {
+  --article-canvas: #0d0d0d;
+  --article-card: #171717;
+}
+
+body:has(.article-page) {
+  background: var(--article-canvas);
+}
+
 .article-page {
   display: grid;
-  grid-template-columns: minmax(0,1fr) minmax(0,720px) minmax(0,1fr);
+  grid-template-columns: 44px minmax(0, 1fr) 292px;
+  grid-template-areas: "rail card side";
+  gap: 20px 24px;
   align-items: start;
+  padding: 12px 0 24px;
+}
+
+.article-rail {
+  position: sticky;
+  top: calc(50vh - 40px);
+  display: grid;
+  grid-area: rail;
+  justify-items: center;
+}
+
+.article-page.is-solo {
+  grid-template-columns: 44px minmax(0, 880px);
+  grid-template-areas: "rail card";
   justify-content: center;
-  column-gap: 48px;
-  row-gap: 36px;
+}
+
+.rail-button {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background: var(--article-card);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: color var(--radius-sm, .16s) ease, border-color .16s ease, background .16s ease;
+}
+
+.rail-button:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.rail-button :deep(svg) {
+  font-size: 18px;
+}
+
+.article-card {
+  display: grid;
+  grid-area: card;
+  min-width: 0;
+  gap: 22px;
+  padding: 34px 44px 44px;
+  border-radius: 12px;
+  background: var(--article-card);
 }
 
 .article-header {
-  grid-column: 2;
-  grid-row: 1;
   display: grid;
   gap: 14px;
 }
 
 .article-header h1 {
-  margin: 8px 0 0;
+  margin: 2px 0 0;
   font-size: 32px;
-  line-height: 1.25;
+  font-weight: 700;
+  letter-spacing: -.02em;
+  line-height: 1.32;
 }
 
 .back {
   width: fit-content;
-  color: var(--color-primary);
+  color: var(--color-text-secondary);
   font-size: 12px;
+}
+
+.back:hover {
+  color: var(--color-primary);
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.meta a {
+  color: var(--color-primary);
 }
 
 .summary {
   margin: 0;
   color: var(--color-text-secondary);
   font-size: 15px;
-  line-height: 1.7;
-}
-
-.meta {
-  display: flex;
-  gap: 8px;
-  color: var(--color-text-secondary);
-  font-size: 11px;
-}
-
-.tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  color: var(--color-primary);
-  font-size: 11px;
+  line-height: 1.75;
 }
 
 .cover {
   width: 100%;
-  max-height: 360px;
-  margin-top: 10px;
-  border-radius: var(--radius-md);
+  max-height: 420px;
+  margin-top: 4px;
+  border-radius: 8px;
   object-fit: cover;
 }
 
-.toc {
+.article-side {
   position: sticky;
-  top: calc(var(--site-header-height) + 24px);
-  grid-column: 3;
-  grid-row: 1/span 2;
+  top: calc(var(--site-header-height) + 20px);
   display: grid;
-  max-height: calc(100vh - var(--site-header-height) - 48px);
+  grid-area: side;
+  gap: 12px;
+}
+
+.side-card {
+  padding: 14px 16px 16px;
+  border-radius: 12px;
+  background: var(--article-card);
+}
+
+.side-details summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 8px;
-  padding: 4px 0 4px 18px;
-  border-left: 1px solid var(--color-border);
+  list-style: none;
+  cursor: pointer;
+}
+
+.side-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.side-head {
+  margin-bottom: 10px;
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.side-head--static {
+  margin-bottom: 8px;
+}
+
+.side-count {
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.side-head-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.side-caret {
+  font-size: 14px;
+  color: var(--color-text-muted);
+  transition: transform .16s ease;
+}
+
+.side-details[open] .side-caret {
+  transform: rotate(180deg);
+}
+
+.toc {
+  display: grid;
+  max-height: calc(100vh - var(--site-header-height) - 200px);
+  gap: 8px;
+  padding: 2px 0;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: none;
@@ -107,10 +308,6 @@ useSeoMeta({
 
 .toc::-webkit-scrollbar {
   display: none;
-}
-
-.toc strong {
-  margin-bottom: 4px;
 }
 
 .toc a {
@@ -122,10 +319,33 @@ useSeoMeta({
   color: var(--color-primary);
 }
 
+.related-list {
+  display: grid;
+  gap: 12px;
+}
+
+.related-item {
+  display: grid;
+  gap: 4px;
+}
+
+.related-title {
+  color: var(--color-text);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.related-item:hover .related-title {
+  color: var(--color-primary);
+}
+
+.related-meta {
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+
 .markdown-body {
   min-width: 0;
-  grid-column: 2;
-  grid-row: 2;
   font-family: system-ui,"Microsoft YaHei UI","Microsoft YaHei",sans-serif;
   font-size: 15px;
   line-height: 1.85;
@@ -232,36 +452,46 @@ useSeoMeta({
   margin: .35em 0;
 }
 
-@media (max-width: 1240px) {
+@media (max-width: 1180px) {
   .article-page {
-    grid-template-columns: minmax(0,720px);
-    row-gap: 30px;
+    grid-template-columns: 44px minmax(0, 1fr);
+    grid-template-areas: "rail card" "rail side";
   }
 
-  .article-header {
-    grid-column: 1;
-    grid-row: 1;
+  .article-rail {
+    position: static;
   }
 
-  .markdown-body {
-    grid-column: 1;
+  .article-side {
+    position: static;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .article-page {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "side" "card";
+    gap: 12px;
+    padding: 8px 0 20px;
+  }
+
+  .article-rail {
+    display: none;
+  }
+
+  .article-card {
+    gap: 16px;
+    padding: 22px 18px 28px;
+    border-radius: 10px;
+  }
+
+  .article-header h1 {
+    font-size: 24px;
   }
 
   .toc {
-    position: static;
-    grid-column: 1;
-    grid-row: 2;
     max-height: none;
-    padding: 18px;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    background: var(--color-background-secondary);
-    overflow: visible;
-  }
-
-  .article-page--with-toc .markdown-body {
-    grid-column: 1;
-    grid-row: 3;
   }
 }
 </style>
