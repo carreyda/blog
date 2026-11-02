@@ -72,7 +72,6 @@ useSeoMeta({
           </template>
         </div>
         <p class="summary">{{ post.summary }}</p>
-        <img v-if="post.coverImageUrl" class="cover" :src="post.coverImageUrl" :alt="post.title">
       </header>
 
       <ArticleImagePreview :html="post.contentHtml" />
@@ -225,14 +224,6 @@ body:has(.article-page) {
   color: var(--color-text-secondary);
   font-size: 15px;
   line-height: 1.75;
-}
-
-.cover {
-  width: 100%;
-  max-height: 420px;
-  margin-top: 4px;
-  border-radius: 8px;
-  object-fit: cover;
 }
 
 .article-side {
