@@ -5,7 +5,6 @@ useSeoMeta({ title: '新建文章' })
 
 <template>
   <section class="editor-page">
-    <AdminPageHeader title="新建文章" />
     <AdminPostForm />
   </section>
 </template>

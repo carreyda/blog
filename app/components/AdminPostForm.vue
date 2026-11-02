@@ -35,6 +35,7 @@ const form = reactive({
 })
 const pending = ref(false)
 const isFullscreen = ref(false)
+const publishOpen = ref(false)
 const { data: tagResponse } = await useFetch<{ data: Tag[] }>('/api/admin/tags')
 const tags = computed(() => tagResponse.value?.data || [])
 const wordCount = computed(() => form.contentMarkdown.trim() ? form.contentMarkdown.trim().split(/\s+/).length : 0)
@@ -64,6 +65,30 @@ async function save(status = form.status) {
 
 function pickImages(): void {
   imageInput.value?.click()
+}
+
+function openPublish(): void {
+  publishOpen.value = true
+}
+
+function toggleTag(id: number): void {
+  const index = form.tagIds.indexOf(id)
+  if (index >= 0) form.tagIds.splice(index, 1)
+  else form.tagIds.push(id)
+}
+
+function submitPublish(): void {
+  if (!form.title.trim()) {
+    publishOpen.value = true
+    notifyError(new Error('请先填写文章标题'), '还不能发布')
+    return
+  }
+  if (!form.summary.trim()) {
+    publishOpen.value = true
+    notifyError(new Error('请补一段摘要，它会出现在列表与分享卡片里'), '还不能发布')
+    return
+  }
+  void save()
 }
 
 function baseName(name: string): string {
@@ -147,7 +172,7 @@ function toggleFullscreen() {
 function shortcut(event: KeyboardEvent) {
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
     event.preventDefault()
-    void save()
+    submitPublish()
   }
 }
 
@@ -156,7 +181,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
 </script>
 
 <template>
-  <form class="post-form" @submit.prevent="save()">
+  <form class="post-form" @submit.prevent="submitPublish">
     <input
       ref="imageInput"
       type="file"
@@ -182,18 +207,15 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
         <UButton type="button" to="/admin/posts" size="sm" color="neutral" variant="ghost" icon="i-lucide-arrow-left">返回列表</UButton>
         <UButton v-if="props.post && form.status === 'PUBLISHED'" type="button" size="sm" color="neutral" variant="outline" :loading="pending" @click="save('ARCHIVED')">下线</UButton>
         <UButton v-if="props.post && form.status === 'ARCHIVED'" type="button" size="sm" color="primary" variant="outline" :loading="pending" @click="save('PUBLISHED')">重新发布</UButton>
-        <UButton type="submit" size="sm" icon="i-lucide-save" :loading="pending" title="Ctrl + S">{{ props.post ? '保存修改' : '保存并发布' }}</UButton>
+        <UButton type="button" size="sm" icon="i-lucide-send" :disabled="pending" title="Ctrl + S" @click="openPublish">{{ props.post ? '更新文章' : '发布文章' }}</UButton>
       </div>
     </div>
 
-    <div class="post-body">
-      <main class="post-editor-column">
-        <UCard class="content-card" :ui="{ body: 'py-4 sm:py-4' }">
-          <div class="content-fields">
-            <UFormField label="标题" required><UInput v-model="form.title" maxlength="200" size="lg" class="title-input w-full" placeholder="输入文章标题…" /></UFormField>
-            <UFormField label="摘要" required><UTextarea v-model="form.summary" maxlength="500" :rows="2" class="w-full" placeholder="用一两句话概括文章内容…" /><template #hint>{{ form.summary.length }}/500</template></UFormField>
-          </div>
-        </UCard>
+    <div class="post-body" :class="{ 'has-panel': publishOpen }">
+      <main class="post-main">
+        <div class="title-card">
+          <input v-model="form.title" class="title-input" maxlength="200" placeholder="输入文章标题…">
+        </div>
 
         <UCard class="editor-card" :ui="{ root: 'editor-card', body: 'p-0 sm:p-0 editor-card-body', header: 'editor-card-head' }">
           <template #header>
@@ -212,29 +234,77 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
         </UCard>
       </main>
 
-      <aside class="post-options">
-        <UCard>
-          <template #header><div class="side-heading"><span>文章标签</span><UIcon name="i-lucide-tags" /></div></template>
-          <div v-if="tags.length" class="tag-list">
-            <label v-for="tag in tags" :key="tag.id" class="tag-option" :class="{ 'tag-option--active': form.tagIds.includes(tag.id) }"><input v-model="form.tagIds" type="checkbox" :value="tag.id"><span>{{ tag.name }}</span><UIcon v-if="form.tagIds.includes(tag.id)" name="i-lucide-check" /></label>
-          </div>
-          <div v-else class="empty-tags"><UIcon name="i-lucide-tag" /><p>暂无标签，可在标签管理中创建。</p></div>
-        </UCard>
+      <div v-if="publishOpen" class="publish-backdrop" @click="publishOpen = false" />
 
-        <UCard>
-          <template #header><div class="side-heading"><span>封面与 SEO</span><UIcon name="i-lucide-sparkles" /></div></template>
-          <div class="option-stack">
-            <UFormField label="封面 URL">
-              <div class="cover-field">
-                <UInput v-model="form.coverImageUrl" type="url" class="w-full" placeholder="https://..." />
-                <UButton type="button" color="neutral" variant="soft" :loading="uploadingCover" icon="i-lucide-upload" @click="pickCover">上传</UButton>
-              </div>
-            </UFormField>
-            <div v-if="form.coverImageUrl" class="cover-preview"><img :src="form.coverImageUrl" alt="文章封面预览"></div>
-            <UFormField label="SEO 标题"><UInput v-model="form.seoTitle" maxlength="200" class="w-full" /><template #hint>{{ form.seoTitle.length }}/200</template></UFormField>
-            <UFormField label="SEO 描述"><UTextarea v-model="form.seoDescription" maxlength="500" :rows="4" class="w-full" /><template #hint>{{ form.seoDescription.length }}/500</template></UFormField>
+      <aside v-if="publishOpen" class="publish-panel" aria-label="发布设置">
+        <header class="publish-head">
+          <div>
+            <h2>{{ props.post ? '更新文章' : '发布文章' }}</h2>
+            <p>确认标签、封面与摘要后即可发布。</p>
           </div>
-        </UCard>
+          <UButton type="button" size="xs" color="neutral" variant="ghost" icon="i-lucide-x" aria-label="关闭发布面板" @click="publishOpen = false" />
+        </header>
+
+        <div class="publish-body">
+          <section class="publish-field">
+            <div class="field-head">
+              <span class="required">*</span><span>标签</span>
+              <span class="counter">{{ form.tagIds.length }} 个</span>
+            </div>
+            <div v-if="tags.length" class="tag-chips">
+              <button
+                v-for="tag in tags"
+                :key="tag.id"
+                type="button"
+                class="tag-chip"
+                :class="{ 'is-active': form.tagIds.includes(tag.id) }"
+                :aria-pressed="form.tagIds.includes(tag.id)"
+                @click="toggleTag(tag.id)"
+              >
+                {{ tag.name }}
+              </button>
+            </div>
+            <p v-if="!tags.length" class="field-hint">还没有标签，去标签管理创建一个就能在这里选择。</p>
+            <p v-else class="field-hint">没有合适的？<NuxtLink to="/admin/tags" class="field-link">去标签管理新建</NuxtLink></p>
+          </section>
+
+          <section class="publish-field">
+            <div class="field-head"><span class="required">*</span><span>文章封面</span></div>
+            <button type="button" class="cover-box" :disabled="uploadingCover" @click="pickCover">
+              <img v-if="form.coverImageUrl" :src="form.coverImageUrl" alt="文章封面预览">
+              <template v-else>
+                <UIcon :name="uploadingCover ? 'i-lucide-loader-circle' : 'i-lucide-plus'" :class="{ 'loading-icon': uploadingCover }" />
+                <span>{{ uploadingCover ? '上传中…' : '上传封面' }}</span>
+              </template>
+            </button>
+            <div class="cover-link">
+              <UInput v-model="form.coverImageUrl" type="url" size="sm" class="w-full" placeholder="或用图片链接 https://..." />
+              <UButton v-if="form.coverImageUrl" type="button" size="sm" color="neutral" variant="ghost" @click="form.coverImageUrl = ''">移除</UButton>
+            </div>
+            <p class="field-hint">建议 16 : 9，宽度不小于 1200px；会用在首页列表与分享卡片上。</p>
+          </section>
+
+          <section class="publish-field">
+            <div class="field-head">
+              <span class="required">*</span><span>编辑摘要</span>
+              <span class="counter">{{ form.summary.length }}/500</span>
+            </div>
+            <UTextarea v-model="form.summary" maxlength="500" :rows="5" class="w-full" placeholder="用一两句话概括文章内容…" />
+          </section>
+
+          <details class="publish-seo">
+            <summary>SEO 设置（可选）</summary>
+            <div class="seo-fields">
+              <UFormField label="SEO 标题"><UInput v-model="form.seoTitle" maxlength="200" class="w-full" /><template #hint>{{ form.seoTitle.length }}/200</template></UFormField>
+              <UFormField label="SEO 描述"><UTextarea v-model="form.seoDescription" maxlength="500" :rows="3" class="w-full" /><template #hint>{{ form.seoDescription.length }}/500</template></UFormField>
+            </div>
+          </details>
+        </div>
+
+        <footer class="publish-foot">
+          <UButton type="button" color="neutral" variant="ghost" @click="publishOpen = false">取消</UButton>
+          <UButton type="button" icon="i-lucide-check" :loading="pending" @click="submitPublish">{{ props.post ? '确定并更新' : '确定并发布' }}</UButton>
+        </footer>
       </aside>
     </div>
   </form>
@@ -289,20 +359,48 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
   display: grid;
   gap: 20px;
   margin-top: 16px;
+  align-items: start;
 }
 
-.post-editor-column,.post-options,.content-fields,.option-stack {
+.post-body.has-panel {
+  grid-template-columns: minmax(0, 1fr) 420px;
+}
+
+.post-main {
   display: grid;
   gap: 20px;
-}
-
-.post-editor-column {
   min-width: 0;
 }
 
-.post-options {
-  grid-template-columns: repeat(2,minmax(0,1fr));
-  align-items: start;
+.title-card {
+  padding: 10px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--admin-surface, var(--color-background));
+  transition: border-color .16s ease, box-shadow .16s ease;
+}
+
+.title-card:focus-within {
+  border-color: var(--admin-accent, var(--color-primary));
+  box-shadow: 0 0 0 3px var(--admin-accent-ring, rgb(68 147 248 / 18%));
+}
+
+.title-input {
+  width: 100%;
+  padding: 6px 0;
+  border: 0;
+  background: transparent;
+  color: var(--admin-text, var(--color-text));
+  font-family: inherit;
+  font-size: 22px;
+  font-weight: 680;
+  letter-spacing: -.02em;
+  outline: none;
+}
+
+.title-input::placeholder {
+  color: var(--admin-faint, var(--color-text-muted));
+  font-weight: 500;
 }
 
 .editor-card {
@@ -325,27 +423,11 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
   box-shadow: 0 1px 0 var(--color-border), 0 10px 16px -16px rgb(0 0 0 / 55%);
 }
 
-.card-heading,.editor-toolbar,.side-heading {
+.editor-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-}
-
-.card-heading h2 {
-  margin: 0;
-  font-size: 14px;
-}
-
-.card-heading p {
-  margin: 4px 0 0;
-  color: var(--color-text-secondary);
-  font-size: 12px;
-}
-
-.title-input :deep(input) {
-  font-weight: 650;
-  letter-spacing: -.01em;
 }
 
 .editor-toolbar strong {
@@ -380,15 +462,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
   animation: spin 1s linear infinite;
 }
 
-.side-heading {
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.side-heading svg {
-  color: var(--color-text-secondary);
-}
-
 .status-dot {
   width: 8px;
   height: 8px;
@@ -403,81 +476,187 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
   box-shadow: 0 0 0 3px rgba(139,149,165,.13);
 }
 
-.tag-list {
+.publish-backdrop {
+  display: none;
+}
+
+.publish-panel {
+  position: sticky;
+  top: calc(var(--admin-header-height, 60px) + var(--post-bar-height));
+  display: flex;
+  max-height: calc(100vh - var(--admin-header-height, 60px) - var(--post-bar-height) - 40px);
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--admin-surface, var(--color-background));
+  box-shadow: 0 24px 48px -40px rgb(15 23 42 / 55%);
+}
+
+.publish-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.publish-head h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 680;
+}
+
+.publish-head p {
+  margin: 4px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.publish-body {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 18px;
+  min-height: 0;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.publish-field {
+  display: grid;
+  gap: 10px;
+}
+
+.field-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--admin-text, var(--color-text));
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.required {
+  color: #e5484d;
+}
+
+.counter {
+  margin-left: auto;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.field-hint {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.field-link {
+  color: var(--admin-accent-text, var(--color-primary));
+}
+
+.field-link:hover {
+  text-decoration: underline;
+}
+
+.tag-chips {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
 
-.tag-option {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 9px;
+.tag-chip {
+  padding: 6px 12px;
   border: 1px solid var(--color-border);
   border-radius: 8px;
+  background: transparent;
   color: var(--color-text-secondary);
   font-size: 12px;
   cursor: pointer;
   transition: .16s ease;
 }
 
-.tag-option:hover,.tag-option--active {
-  border-color: rgba(68,147,248,.55);
-  color: #2878d4;
-  background: rgba(68,147,248,.08);
+.tag-chip:hover {
+  border-color: var(--admin-accent, var(--color-primary));
+  color: var(--admin-text, var(--color-text));
 }
 
-.tag-option input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
+.tag-chip.is-active {
+  border-color: var(--admin-accent, var(--color-primary));
+  background: var(--admin-accent-soft, rgb(68 147 248 / 12%));
+  color: var(--admin-accent-text, var(--color-primary));
+  font-weight: 600;
 }
 
-.empty-tags {
+.cover-box {
   display: grid;
-  min-height: 90px;
-  place-items: center;
-  color: var(--color-text-secondary);
-  text-align: center;
-}
-
-.empty-tags svg {
-  font-size: 20px;
-}
-
-.empty-tags p {
-  margin: 0;
-  font-size: 12px;
-}
-
-.cover-preview {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  place-content: center;
+  justify-items: center;
+  gap: 6px;
   overflow: hidden;
-  aspect-ratio: 16/9;
-  border: 1px solid var(--color-border);
-  border-radius: 9px;
-  background: var(--color-background-secondary);
+  padding: 0;
+  border: 1px dashed var(--color-border);
+  border-radius: 10px;
+  background: var(--admin-surface-2, var(--color-background-secondary));
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color .16s ease, color .16s ease;
 }
 
-.cover-preview img {
+.cover-box:hover {
+  border-color: var(--admin-accent, var(--color-primary));
+  color: var(--admin-accent-text, var(--color-primary));
+}
+
+.cover-box img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.cover-field {
+.cover-box :deep(svg) {
+  font-size: 20px;
+}
+
+.cover-link {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.cover-field :deep(input) {
-  min-width: 0;
+.publish-seo {
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border);
 }
 
-.cover-field :deep(button) {
-  flex: 0 0 auto;
-  white-space: nowrap;
+.publish-seo summary {
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.seo-fields {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.publish-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--color-border);
+  background: var(--admin-surface, var(--color-background));
 }
 
 .hidden-input {
@@ -491,8 +670,30 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
 }
 
 @media (max-width: 1100px) {
-  .post-options {
-    grid-template-columns: repeat(2,minmax(0,1fr));
+  .post-body.has-panel {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .publish-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 39;
+    background: rgb(15 23 42 / 38%);
+  }
+
+  .publish-panel {
+    position: fixed;
+    top: var(--admin-header-height, 60px);
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    width: min(420px, 94vw);
+    max-height: none;
+    border-top: 0;
+    border-right: 0;
+    border-bottom: 0;
+    border-radius: 0;
   }
 }
 
@@ -501,8 +702,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
     --post-bar-height: 80px;
   }
 
-  .post-options {
-    grid-template-columns: 1fr;
+  .publish-panel {
+    width: 100vw;
   }
 
   .bar-actions {
@@ -513,6 +714,10 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
   .bar-actions > * {
     flex: 1 1 auto;
     justify-content: center;
+  }
+
+  .title-input {
+    font-size: 18px;
   }
 
   .editor-toolbar {

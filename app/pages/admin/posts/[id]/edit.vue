@@ -9,7 +9,6 @@ useSeoMeta({ title: () => `编辑 ${response.value?.data.title || '文章'}` })
 
 <template>
   <section class="editor-page">
-    <AdminPageHeader title="编辑文章" />
     <AdminPostForm v-if="response?.data" :post="response.data" />
   </section>
 </template>
