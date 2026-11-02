@@ -1,11 +1,13 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 definePageMeta({ layout: 'admin' })
 useSeoMeta({ title: '项目管理' })
 
 type Project = { id: number; name: string; summary: string; status: 'ACTIVE' | 'ARCHIVED' | 'SOLD' | 'BUILDING'; websiteUrl: string | null; githubUrl: string | null; techStack: string[]; sort: number }
 const session = useState<{ csrfToken: string } | null>('admin-session')
 const { data: response, refresh } = await useFetch<{ data: Project[] }>('/api/admin/projects')
-const projects = computed(() => response.value?.data || [])
+// Local copy so a drag can reorder optimistically before the request resolves.
+const projects = ref<Project[]>(response.value?.data || [])
+watch(() => response.value?.data, (list) => { if (list) projects.value = list })
 const statusItems: { label: string; value: Project['status'] }[] = [
   { label: '已上线', value: 'ACTIVE' },
   { label: '开发中', value: 'BUILDING' },
@@ -28,10 +30,76 @@ function edit(project: Project) {
   Object.assign(form, { ...project, websiteUrl: project.websiteUrl || '', githubUrl: project.githubUrl || '', techStack: project.techStack.join(', ') })
   document.querySelector('.admin-panel-body')?.scrollTo({ top: 0, behavior: 'smooth' })
 }
-
 function reset() {
   editingId.value = null
   Object.assign(form, blank())
+}
+
+/* ---------------------------------------------------------------- reordering */
+const draggingId = ref<number | null>(null)
+const dropTarget = ref<{ id: number; position: 'before' | 'after' } | null>(null)
+const reordering = ref(false)
+
+function clearDrag() {
+  draggingId.value = null
+  dropTarget.value = null
+}
+
+function onDragStart(event: DragEvent, project: Project) {
+  if (reordering.value) return
+  draggingId.value = project.id
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', String(project.id))
+  }
+}
+
+function onDragOver(event: DragEvent, project: Project) {
+  if (draggingId.value === null || draggingId.value === project.id) return
+  event.preventDefault()
+  if (event.dataTransfer) event.dataTransfer.dropEffect = 'move'
+  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
+  // Two-column grid: the half the cursor sits in decides insert before/after.
+  dropTarget.value = { id: project.id, position: event.clientX - rect.left < rect.width / 2 ? 'before' : 'after' }
+}
+
+function onDragLeave(project: Project) {
+  if (dropTarget.value?.id === project.id) dropTarget.value = null
+}
+
+async function onDrop(event: DragEvent, project: Project) {
+  event.preventDefault()
+  const fromId = draggingId.value
+  const target = dropTarget.value
+  clearDrag()
+  if (fromId === null || fromId === project.id || target?.id !== project.id) return
+
+  const current = projects.value.map(item => item.id)
+  const withoutDragged = current.filter(id => id !== fromId)
+  const anchor = withoutDragged.indexOf(project.id)
+  if (anchor < 0) return
+
+  const insertAt = target.position === 'before' ? anchor : anchor + 1
+  const next = [...withoutDragged.slice(0, insertAt), fromId, ...withoutDragged.slice(insertAt)]
+  if (next.join(',') === current.join(',')) return
+
+  await persistOrder(next)
+}
+
+async function persistOrder(ids: number[]) {
+  if (!session.value) return
+  const snapshot = projects.value
+  projects.value = ids.map(id => snapshot.find(item => item.id === id)).filter((item): item is Project => Boolean(item))
+  reordering.value = true
+  try {
+    await $fetch('/api/admin/projects/reorder', { method: 'PATCH', body: { ids }, headers: { 'X-CSRF-Token': session.value.csrfToken } })
+    notifySuccess('排序已更新')
+  } catch (error) {
+    projects.value = snapshot
+    notifyError(error, '保存排序失败')
+  } finally {
+    reordering.value = false
+  }
 }
 
 async function save() {
@@ -94,11 +162,32 @@ async function remove(project: Project) {
       <div class="project-list">
         <div class="project-list-heading"><div><strong>全部项目</strong><p>共 {{ projects.length }} 个项目</p></div><UBadge color="neutral" variant="subtle">{{ projects.length }}</UBadge></div>
         <div v-if="projects.length" class="project-grid">
-          <UCard v-for="project in projects" :key="project.id" class="project-card">
-            <div class="project-card-head"><span class="project-icon"><UIcon name="i-lucide-box" /></span><UBadge :color="statusColor(project.status)" variant="subtle" size="sm">{{ statusLabel(project.status) }}</UBadge></div>
+          <UCard
+            v-for="(project, index) in projects"
+            :key="project.id"
+            class="project-card"
+            :class="{
+              'is-dragging': draggingId === project.id,
+              'is-drop-before': dropTarget?.id === project.id && dropTarget.position === 'before',
+              'is-drop-after': dropTarget?.id === project.id && dropTarget.position === 'after',
+            }"
+            draggable="true"
+            @dragstart="onDragStart($event, project)"
+            @dragover="onDragOver($event, project)"
+            @dragleave="onDragLeave(project)"
+            @drop="onDrop($event, project)"
+            @dragend="clearDrag"
+          >
+            <div class="project-card-head">
+              <div class="project-lead">
+                <span class="drag-handle" title="拖拽调整顺序" aria-hidden="true"><UIcon name="i-lucide-grip-vertical" /></span>
+                <span class="project-icon"><UIcon name="i-lucide-box" /></span>
+              </div>
+              <UBadge :color="statusColor(project.status)" variant="subtle" size="sm">{{ statusLabel(project.status) }}</UBadge>
+            </div>
             <div class="project-copy"><strong>{{ project.name }}</strong><p>{{ project.summary }}</p></div>
             <div class="tech-list"><span v-for="tech in project.techStack" :key="tech">{{ tech }}</span><span v-if="!project.techStack.length">暂未设置技术栈</span></div>
-            <div class="project-meta"><span>排序 {{ project.sort }}</span><span class="project-links"><a v-if="project.websiteUrl" :href="project.websiteUrl" target="_blank" rel="noopener noreferrer" aria-label="访问项目"><UIcon name="i-lucide-external-link" /></a><a v-if="project.githubUrl" :href="project.githubUrl" target="_blank" rel="noopener noreferrer" aria-label="查看 GitHub"><UIcon name="i-lucide-github" /></a></span></div>
+            <div class="project-meta"><span>第 {{ index + 1 }} 位</span><span class="project-links"><a v-if="project.websiteUrl" :href="project.websiteUrl" target="_blank" rel="noopener noreferrer" aria-label="访问项目"><UIcon name="i-lucide-external-link" /></a><a v-if="project.githubUrl" :href="project.githubUrl" target="_blank" rel="noopener noreferrer" aria-label="查看 GitHub"><UIcon name="i-lucide-github" /></a></span></div>
             <template #footer><div class="project-actions"><UButton icon="i-lucide-pencil" size="xs" color="neutral" variant="ghost" @click="edit(project)">编辑</UButton><UButton icon="i-lucide-trash-2" size="xs" color="error" variant="ghost" :loading="deletingId === project.id" :disabled="deletingId !== null" @click="remove(project)">删除</UButton></div></template>
           </UCard>
         </div>
@@ -123,8 +212,25 @@ async function remove(project: Project) {
 .project-list { display: grid; gap: 14px; }
 .project-list-heading { display: flex; min-height: 36px; align-items: center; justify-content: space-between; gap: 16px; }
 .project-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-.project-card { min-width: 0; }
+.project-card { position: relative; min-width: 0; cursor: grab; }
+.project-card:active { cursor: grabbing; }
+.project-card.is-dragging { opacity: .45; }
+.project-card.is-drop-before::before,
+.project-card.is-drop-after::after {
+  content: '';
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--admin-accent, var(--color-primary));
+}
+.project-card.is-drop-before::before { left: 2px; }
+.project-card.is-drop-after::after { right: 2px; }
 .project-card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.project-lead { display: flex; min-width: 0; align-items: center; gap: 8px; }
+.drag-handle { display: grid; width: 20px; height: 20px; flex: none; place-items: center; color: var(--color-text-muted); }
+.drag-handle :deep(svg) { width: 14px; height: 14px; }
 .project-icon { display: grid; width: 36px; height: 36px; place-items: center; border: 1px solid var(--color-border); border-radius: 10px; color: var(--color-text-secondary); }
 .project-icon :deep(svg) { width: 16px; height: 16px; }
 .project-copy { margin-top: 18px; }
