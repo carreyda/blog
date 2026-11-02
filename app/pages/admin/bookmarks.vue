@@ -472,6 +472,29 @@ function markIconBroken(id: number) {
   align-items: start;
 }
 
+/* The category tree stays put while the bookmark list scrolls; it gets its own
+   scroll area once the tree is taller than the viewport. */
+.category-card {
+  position: sticky;
+  top: calc(var(--admin-header-height, 60px) + 16px);
+  display: flex;
+  max-height: calc(100vh - var(--admin-header-height, 60px) - 32px);
+  flex-direction: column;
+}
+
+.category-card > * {
+  flex: none;
+}
+
+/* UCard renders the slot inside a padded body div; that body is the part that
+   scrolls so the card header stays visible. */
+.category-card > :last-child {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 .card-heading {
   display: flex;
   align-items: center;
@@ -832,6 +855,15 @@ function markIconBroken(id: number) {
 @media (max-width: 1100px) {
   .workspace-grid {
     grid-template-columns: 1fr;
+  }
+
+  .category-card {
+    position: static;
+    max-height: none;
+  }
+
+  .category-card > :last-child {
+    overflow: visible;
   }
 }
 
