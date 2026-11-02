@@ -46,6 +46,58 @@ function flattenCategories(nodes: Category[], depth = 0, parents: string[] = [])
   })
 }
 
+/* Collapsed branches are pruned from the rendered list; the full flatten stays
+   available for the parent selector and the bookmark filter. */
+const collapsedCategoryIds = ref<number[]>([])
+const collapsedCategories = computed(() => new Set(collapsedCategoryIds.value))
+
+const visibleCategories = computed(() => {
+  const collapsed = collapsedCategories.value
+  const rows: FlatCategory[] = []
+  const walk = (nodes: Category[], depth: number, parents: string[]) => {
+    for (const node of nodes) {
+      rows.push({ ...node, depth, path: [...parents, node.name].join(' / ') })
+      if (node.children.length && !collapsed.has(node.id)) walk(node.children, depth + 1, [...parents, node.name])
+    }
+  }
+  walk(categories.value, 0, [])
+  return rows
+})
+
+const hasCollapsibleCategories = computed(() => flatCategories.value.some(category => category.children.length > 0))
+
+const allCategoriesCollapsed = computed(() => {
+  const collapsible = flatCategories.value.filter(category => category.children.length)
+  return collapsible.length > 0 && collapsible.every(category => collapsedCategories.value.has(category.id))
+})
+
+function toggleCategory(id: number) {
+  collapsedCategoryIds.value = collapsedCategories.value.has(id)
+    ? collapsedCategoryIds.value.filter(item => item !== id)
+    : [...collapsedCategoryIds.value, id]
+}
+
+function expandAllCategories() {
+  collapsedCategoryIds.value = []
+}
+
+function collapseAllCategories() {
+  collapsedCategoryIds.value = flatCategories.value.filter(category => category.children.length).map(category => category.id)
+}
+
+function revealCategory(id: number | null) {
+  if (id === null) return
+  const parents = new Map(flatCategories.value.map(category => [category.id, category.parentId ?? null]))
+  const collapsed = new Set(collapsedCategoryIds.value)
+  collapsed.delete(id)
+  let ancestor = parents.get(id) ?? null
+  while (ancestor !== null) {
+    collapsed.delete(ancestor)
+    ancestor = parents.get(ancestor) ?? null
+  }
+  collapsedCategoryIds.value = [...collapsed]
+}
+
 const blankCategory = () => ({ name: '', parentId: null as number | null, sort: 0 })
 const categoryForm = reactive(blankCategory())
 const editingCategoryId = ref<number | null>(null)
@@ -143,6 +195,7 @@ function startCreateCategory(parentId: number | null = null) {
   editingCategoryId.value = null
   Object.assign(categoryForm, { name: '', parentId, sort: 0 })
   categoryEditorOpen.value = true
+  revealCategory(parentId)
   nextTick(() => document.querySelector('.category-editor')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }))
 }
 
@@ -283,6 +336,17 @@ function markIconBroken(id: number) {
               <span><UIcon name="i-lucide-folders" /></span>
               <div><strong>分类结构</strong><p>{{ categories.length }} 个一级分类，{{ flatCategories.length }} 个分类</p></div>
             </div>
+            <UButton
+              v-if="hasCollapsibleCategories"
+              size="sm"
+              color="neutral"
+              variant="ghost"
+              square
+              :icon="allCategoriesCollapsed ? 'i-lucide-chevrons-down' : 'i-lucide-chevrons-up'"
+              :aria-label="allCategoriesCollapsed ? '展开全部分类' : '收起全部分类'"
+              :title="allCategoriesCollapsed ? '展开全部' : '收起全部'"
+              @click="allCategoriesCollapsed ? expandAllCategories() : collapseAllCategories()"
+            />
             <UButton size="sm" icon="i-lucide-plus" @click="startCreateCategory()">新增</UButton>
           </div>
         </template>
@@ -308,14 +372,26 @@ function markIconBroken(id: number) {
         <UEmpty v-if="!categories.length" variant="naked" icon="i-lucide-folder-plus" title="暂无分类" description="先创建一级分类，再继续添加子分类。" />
         <div v-else class="category-tree">
           <div
-            v-for="category in flatCategories"
+            v-for="category in visibleCategories"
             :key="category.id"
             class="category-row"
-            :class="{ 'is-root': category.depth === 0 }"
+            :class="{ 'is-root': category.depth === 0, 'is-collapsed': collapsedCategories.has(category.id) }"
             :style="{ '--depth': category.depth }"
           >
-            <span class="category-icon"><UIcon :name="category.depth === 0 ? 'i-lucide-folder' : 'i-lucide-folder-open'" /></span>
-            <div><strong>{{ category.name }}</strong><small>{{ category._count.children }} 个子分类 · {{ category._count.bookmarks }} 个收藏 · 排序 {{ category.sort }}</small></div>
+            <div class="category-lead">
+              <button
+                v-if="category.children.length"
+                type="button"
+                class="tree-toggle"
+                :class="{ 'is-open': !collapsedCategories.has(category.id) }"
+                :aria-expanded="!collapsedCategories.has(category.id)"
+                :aria-label="`${collapsedCategories.has(category.id) ? '展开' : '收起'} ${category.name}`"
+                @click="toggleCategory(category.id)"
+              ><UIcon name="i-lucide-chevron-right" /></button>
+              <span v-else class="tree-toggle is-leaf" aria-hidden="true" />
+              <span class="category-icon"><UIcon :name="category.children.length && !collapsedCategories.has(category.id) ? 'i-lucide-folder-open' : 'i-lucide-folder'" /></span>
+            </div>
+            <div class="category-copy"><strong :title="category.name">{{ category.name }}</strong><small>{{ category._count.children }} 个子分类 · {{ category._count.bookmarks }} 个收藏</small></div>
             <div class="row-actions">
               <UButton icon="i-lucide-folder-plus" size="xs" color="neutral" variant="ghost" square :aria-label="`在 ${category.name} 下新增子分类`" @click="startCreateCategory(category.id)" />
               <UButton icon="i-lucide-pencil" size="xs" color="neutral" variant="ghost" square :aria-label="`编辑 ${category.name}`" @click="editCategory(category)" />
@@ -538,12 +614,57 @@ function markIconBroken(id: number) {
 
 .category-row {
   display: grid;
-  grid-template-columns: 34px minmax(0,1fr) auto;
+  grid-template-columns: auto minmax(0,1fr) auto;
   align-items: center;
   gap: 10px;
   min-height: 54px;
-  padding: 8px 8px 8px calc(8px + var(--depth) * 22px);
+  padding: 8px 8px 8px calc(8px + var(--depth) * 18px);
   border-radius: 8px;
+}
+
+.category-lead {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.tree-toggle {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  flex: none;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: color 120ms var(--admin-ease, ease), background-color 120ms var(--admin-ease, ease);
+}
+
+.tree-toggle:hover {
+  background: var(--color-background-secondary);
+  color: var(--color-primary);
+}
+
+.tree-toggle.is-leaf {
+  cursor: default;
+  background: none;
+}
+
+.tree-toggle :deep(svg) {
+  width: 14px;
+  height: 14px;
+  transition: transform 140ms var(--admin-ease, ease);
+}
+
+.tree-toggle.is-open :deep(svg) {
+  transform: rotate(90deg);
+}
+
+.category-row.is-collapsed .category-icon {
+  color: var(--color-text-muted);
 }
 
 .category-row.is-root:not(:first-child) {
@@ -557,12 +678,24 @@ function markIconBroken(id: number) {
   background: var(--color-background-secondary);
 }
 
-.category-row>div:nth-of-type(1) {
+.category-copy {
   display: grid;
   gap: 4px;
+  min-width: 0;
 }
 
 .category-row.is-root strong {
+  font-size: 12px;
+}
+
+.category-copy strong,
+.category-copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.category-copy strong {
   font-size: 12px;
 }
 
