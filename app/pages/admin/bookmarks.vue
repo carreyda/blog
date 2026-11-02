@@ -195,20 +195,20 @@ function startCreateCategory(parentId: number | null = null) {
   editingCategoryId.value = null
   Object.assign(categoryForm, { name: '', parentId, sort: 0 })
   categoryEditorOpen.value = true
+  // Expand the branch behind the dialog so the new node is visible on close.
   revealCategory(parentId)
-  nextTick(() => document.querySelector('.category-editor')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }))
 }
 
 function editCategory(category: FlatCategory) {
   editingCategoryId.value = category.id
   categoryEditorOpen.value = true
   Object.assign(categoryForm, { name: category.name, parentId: category.parentId, sort: category.sort })
-  nextTick(() => document.querySelector('.category-editor')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }))
 }
 
 async function saveCategory() {
   if (!session.value || categoryPending.value) return
   categoryPending.value = true
+  const parentId = categoryForm.parentId
   try {
     const successMessage = editingCategoryId.value ? '分类已保存' : '分类已创建'
     await $fetch(editingCategoryId.value ? `/api/admin/bookmark-categories/${editingCategoryId.value}` : '/api/admin/bookmark-categories', {
@@ -218,6 +218,7 @@ async function saveCategory() {
     })
     resetCategory()
     await Promise.all([refreshCategories(), refreshBookmarks()])
+    revealCategory(parentId)
     notifySuccess(successMessage)
   } catch (error) {
     notifyError(error, '保存分类失败')
@@ -258,7 +259,6 @@ function startCreateBookmark(categoryId?: number) {
     categoryId: categoryId || categoryOptions.value[0]?.value || 0,
   })
   bookmarkEditorOpen.value = true
-  nextTick(() => document.querySelector('.bookmark-editor')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }))
 }
 
 function editBookmark(bookmark: Bookmark) {
@@ -273,7 +273,6 @@ function editBookmark(bookmark: Bookmark) {
     sort: bookmark.sort,
     isVisible: bookmark.isVisible,
   })
-  nextTick(() => document.querySelector('.bookmark-editor')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }))
 }
 
 async function saveBookmark() {
@@ -351,24 +350,6 @@ function markIconBroken(id: number) {
           </div>
         </template>
 
-        <Transition name="editor-fade">
-          <form v-if="categoryEditorOpen" class="inline-editor category-editor" @submit.prevent="saveCategory">
-            <div class="editor-title">
-              <strong>{{ editingCategoryId ? '编辑分类' : '新增分类' }}</strong>
-              <UButton icon="i-lucide-x" size="xs" color="neutral" variant="ghost" square aria-label="关闭分类编辑" @click="resetCategory" />
-            </div>
-            <UFormField label="分类名称" required><UInput v-model="categoryForm.name" class="w-full" placeholder="例如：开发资源" /></UFormField>
-            <UFormField label="父分类" description="留空表示一级分类，可选择任意已有分类">
-              <USelect v-model="parentSelectValue" :items="parentSelectItems" value-key="value" class="w-full" />
-            </UFormField>
-            <UFormField label="排序"><UInput v-model.number="categoryForm.sort" type="number" min="-9999" max="9999" class="w-full" /></UFormField>
-            <div class="form-actions">
-              <UButton type="submit" icon="i-lucide-check" :loading="categoryPending">{{ editingCategoryId ? '保存分类' : '创建分类' }}</UButton>
-              <UButton v-if="editingCategoryId" type="button" color="neutral" variant="ghost" @click="resetCategory">取消</UButton>
-            </div>
-          </form>
-        </Transition>
-
         <UEmpty v-if="!categories.length" variant="naked" icon="i-lucide-folder-plus" title="暂无分类" description="先创建一级分类，再继续添加子分类。" />
         <div v-else class="category-tree">
           <div
@@ -412,30 +393,6 @@ function markIconBroken(id: number) {
           </div>
         </template>
 
-        <Transition name="editor-fade">
-          <form v-if="bookmarkEditorOpen" class="inline-editor bookmark-editor" @submit.prevent="saveBookmark">
-            <div class="editor-title">
-              <strong>{{ editingBookmarkId ? '编辑收藏' : '新增收藏' }}</strong>
-              <UButton icon="i-lucide-x" size="xs" color="neutral" variant="ghost" square aria-label="关闭收藏编辑" @click="resetBookmark" />
-            </div>
-            <div class="bookmark-fields">
-              <UFormField label="所属分类" required>
-                <USelect v-model.number="bookmarkForm.categoryId" :items="categoryOptions" value-key="value" :disabled="!categoryOptions.length" placeholder="请先创建分类" class="w-full" />
-              </UFormField>
-              <UFormField label="收藏名称" required><UInput v-model="bookmarkForm.name" class="w-full" placeholder="网站名称" /></UFormField>
-              <UFormField label="网站 URL" required><UInput v-model="bookmarkForm.url" icon="i-lucide-link" class="w-full" placeholder="https://example.com" /></UFormField>
-              <UFormField label="图标 URL" description="可留空，前台会显示默认图标"><UInput v-model="bookmarkForm.iconUrl" icon="i-lucide-image" class="w-full" placeholder="https://example.com/icon.png" /></UFormField>
-              <UFormField label="描述" required class="span-two"><UTextarea v-model="bookmarkForm.description" :rows="3" class="w-full" placeholder="简要说明这个网站的用途" /></UFormField>
-              <UFormField label="排序"><UInput v-model.number="bookmarkForm.sort" type="number" min="-9999" max="9999" class="w-full" /></UFormField>
-              <label class="visibility-toggle"><input v-model="bookmarkForm.isVisible" type="checkbox"><span><strong>公开展示</strong><small>关闭后不会出现在前台收藏页</small></span></label>
-            </div>
-            <div class="form-actions">
-              <UButton type="submit" icon="i-lucide-check" :loading="bookmarkPending" :disabled="!categoryOptions.length">{{ editingBookmarkId ? '保存收藏' : '添加收藏' }}</UButton>
-              <UButton v-if="editingBookmarkId" type="button" color="neutral" variant="ghost" @click="resetBookmark">取消</UButton>
-            </div>
-          </form>
-        </Transition>
-
         <UEmpty v-if="!filteredBookmarks.length" variant="naked" icon="i-lucide-bookmark" title="暂无收藏" description="添加网站后会在这里集中管理。" />
         <div v-else class="bookmark-list">
           <article v-for="bookmark in filteredBookmarks" :key="bookmark.id" class="bookmark-row">
@@ -456,6 +413,52 @@ function markIconBroken(id: number) {
         </div>
       </UCard>
     </div>
+
+    <UModal v-model:open="categoryEditorOpen" :title="editingCategoryId ? '编辑分类' : '新增分类'" description="分类支持任意层级，父分类决定它挂在哪一枝。" :ui="{ content: 'max-w-lg' }">
+      <template #body>
+        <form id="category-form" class="modal-form" @submit.prevent="saveCategory">
+          <UFormField label="分类名称" required><UInput v-model="categoryForm.name" class="w-full" placeholder="例如：开发资源" /></UFormField>
+          <UFormField label="父分类" description="留空表示一级分类，可选择任意已有分类">
+            <USelect v-model="parentSelectValue" :items="parentSelectItems" value-key="value" class="w-full" />
+          </UFormField>
+          <UFormField label="排序"><UInput v-model.number="categoryForm.sort" type="number" min="-9999" max="9999" class="w-full" /></UFormField>
+        </form>
+      </template>
+      <template #footer>
+        <div class="modal-actions">
+          <UButton color="neutral" variant="ghost" @click="resetCategory">取消</UButton>
+          <UButton type="submit" form="category-form" icon="i-lucide-check" :loading="categoryPending">
+            {{ editingCategoryId ? '保存分类' : '创建分类' }}
+          </UButton>
+        </div>
+      </template>
+    </UModal>
+
+    <UModal v-model:open="bookmarkEditorOpen" :title="editingBookmarkId ? '编辑收藏' : '新增收藏'" description="收藏会按分类整理后展示在前台收藏页。" :ui="{ content: 'max-w-xl' }">
+      <template #body>
+        <form id="bookmark-form" class="modal-form" @submit.prevent="saveBookmark">
+          <div class="modal-form-grid">
+            <UFormField label="所属分类" required>
+              <USelect v-model.number="bookmarkForm.categoryId" :items="categoryOptions" value-key="value" :disabled="!categoryOptions.length" placeholder="请先创建分类" class="w-full" />
+            </UFormField>
+            <UFormField label="收藏名称" required><UInput v-model="bookmarkForm.name" class="w-full" placeholder="网站名称" /></UFormField>
+            <UFormField label="网站 URL" required><UInput v-model="bookmarkForm.url" icon="i-lucide-link" class="w-full" placeholder="https://example.com" /></UFormField>
+            <UFormField label="图标 URL" hint="可留空"><UInput v-model="bookmarkForm.iconUrl" icon="i-lucide-image" class="w-full" placeholder="https://example.com/icon.png" /></UFormField>
+            <UFormField label="描述" required class="span-two"><UTextarea v-model="bookmarkForm.description" :rows="3" class="w-full" placeholder="简要说明这个网站的用途" /></UFormField>
+            <UFormField label="排序"><UInput v-model.number="bookmarkForm.sort" type="number" min="-9999" max="9999" class="w-full" /></UFormField>
+            <label class="visibility-toggle"><input v-model="bookmarkForm.isVisible" type="checkbox"><span><strong>公开展示</strong><small>关闭后不会出现在前台收藏页</small></span></label>
+          </div>
+        </form>
+      </template>
+      <template #footer>
+        <div class="modal-actions">
+          <UButton color="neutral" variant="ghost" @click="resetBookmark">取消</UButton>
+          <UButton type="submit" form="bookmark-form" icon="i-lucide-check" :loading="bookmarkPending" :disabled="!categoryOptions.length">
+            {{ editingBookmarkId ? '保存收藏' : '添加收藏' }}
+          </UButton>
+        </div>
+      </template>
+    </UModal>
   </section>
 </template>
 
@@ -532,65 +535,36 @@ function markIconBroken(id: number) {
   font-size: 10px;
 }
 
-.inline-editor {
+.modal-form {
   display: grid;
   gap: 14px;
-  margin-bottom: 18px;
-  padding: 14px;
-  border: 1px solid var(--color-border);
-  border-radius: 10px;
-  background: var(--color-background-secondary);
 }
 
-.editor-title {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.editor-title strong {
-  font-size: 12px;
-  font-weight: 680;
-}
-
-.category-editor {
-  grid-template-columns: minmax(0, 1fr);
-}
-
-.bookmark-editor {
-  background: color-mix(in srgb, var(--color-background-secondary) 72%, transparent);
-}
-
-.bookmark-fields {
+.modal-form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
+}
+
+@media (max-width: 640px) {
+  .modal-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.modal-actions {
+  display: flex;
+  width: 100%;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .span-two {
   grid-column: 1/-1;
 }
 
-.editor-fade-enter-active,
-.editor-fade-leave-active {
-  transition: opacity .16s ease, transform .16s ease;
-}
-
-.editor-fade-enter-from,
-.editor-fade-leave-to {
-  opacity: 0;
-  transform: translateY(-4px);
-}
-
 .filter-select {
   width: 100%;
-}
-
-.form-actions {
-  display: flex;
-  gap: 8px;
-  padding-top: 2px;
 }
 
 .visibility-toggle {
