@@ -48,11 +48,14 @@ async function save(status = form.status) {
       : status !== form.status ? (status === 'ARCHIVED' ? '文章已下线' : '文章已重新发布') : '文章已保存'
     const { status: _currentStatus, ...content } = form
     const body = props.post ? { ...content, status } : content
-    const response: any = props.post
-      ? await $fetch(`/api/admin/posts/${props.post.id}`, { method: 'PUT', body, headers: { 'X-CSRF-Token': session.value.csrfToken } })
-      : await $fetch('/api/admin/posts', { method: 'POST', body, headers: { 'X-CSRF-Token': session.value.csrfToken } })
+    if (props.post) {
+      await $fetch(`/api/admin/posts/${props.post.id}`, { method: 'PUT', body, headers: { 'X-CSRF-Token': session.value.csrfToken } })
+    }
+    else {
+      await $fetch('/api/admin/posts', { method: 'POST', body, headers: { 'X-CSRF-Token': session.value.csrfToken } })
+    }
     form.status = status
-    await navigateTo(`/admin/posts/${response.data.id}/edit`)
+    await navigateTo('/admin/posts')
     notifySuccess(successMessage)
   } catch (error) {
     notifyError(error, '操作失败，文章内容已保留')
@@ -169,79 +172,123 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
       :accept="ADMIN_MEDIA_ACCEPT"
       @change="onCoverPicked"
     >
-    <main class="post-editor-column">
-      <UCard class="content-card">
-        <template #header>
-          <div class="card-heading"><div><h2>文章内容</h2><p>清晰的标题与摘要有助于读者快速了解主题。</p></div><UBadge :color="form.status === 'PUBLISHED' ? 'success' : 'neutral'" variant="soft">{{ form.status === 'PUBLISHED' ? '已发布' : '已下线' }}</UBadge></div>
-        </template>
-        <div class="content-fields">
-          <UFormField label="标题" required><UInput v-model="form.title" maxlength="200" size="xl" class="title-input w-full" placeholder="输入文章标题…" /></UFormField>
-          <UFormField label="摘要" required><UTextarea v-model="form.summary" maxlength="500" :rows="3" class="w-full" placeholder="用一两句话概括文章内容…" /><template #hint>{{ form.summary.length }}/500</template></UFormField>
-        </div>
-      </UCard>
+    <div class="post-bar">
+      <div class="bar-state">
+        <span class="status-dot" :class="{ 'status-dot--muted': form.status === 'ARCHIVED' }" />
+        <strong>{{ form.status === 'PUBLISHED' ? '已发布' : '已下线' }}</strong>
+        <span class="bar-meta">{{ wordCount }} 字 · 约 {{ readingTime }} 分钟</span>
+      </div>
+      <div class="bar-actions">
+        <UButton type="button" to="/admin/posts" size="sm" color="neutral" variant="ghost" icon="i-lucide-arrow-left">返回列表</UButton>
+        <UButton v-if="props.post && form.status === 'PUBLISHED'" type="button" size="sm" color="neutral" variant="outline" :loading="pending" @click="save('ARCHIVED')">下线</UButton>
+        <UButton v-if="props.post && form.status === 'ARCHIVED'" type="button" size="sm" color="primary" variant="outline" :loading="pending" @click="save('PUBLISHED')">重新发布</UButton>
+        <UButton type="submit" size="sm" icon="i-lucide-save" :loading="pending" title="Ctrl + S">{{ props.post ? '保存修改' : '保存并发布' }}</UButton>
+      </div>
+    </div>
 
-      <UCard class="editor-card" :ui="{ body: 'p-0 sm:p-0' }">
-        <template #header>
-          <div class="editor-toolbar">
-            <div><strong>Markdown 正文</strong><span>{{ wordCount }} 字 · 约 {{ readingTime }} 分钟阅读</span></div>
-            <div class="editor-actions">
-              <UButton type="button" size="sm" color="neutral" variant="soft" :icon="isFullscreen ? 'i-lucide-minimize-2' : 'i-lucide-maximize-2'" @click="toggleFullscreen">{{ isFullscreen ? '退出全屏' : '全屏编辑' }}</UButton>
-              <UButton type="button" size="sm" color="neutral" variant="soft" icon="i-lucide-image-plus" :loading="uploadingImages" @click="pickImages">上传图片</UButton>
-            </div>
+    <div class="post-body">
+      <main class="post-editor-column">
+        <UCard class="content-card" :ui="{ body: 'py-4 sm:py-4' }">
+          <div class="content-fields">
+            <UFormField label="标题" required><UInput v-model="form.title" maxlength="200" size="lg" class="title-input w-full" placeholder="输入文章标题…" /></UFormField>
+            <UFormField label="摘要" required><UTextarea v-model="form.summary" maxlength="500" :rows="2" class="w-full" placeholder="用一两句话概括文章内容…" /><template #hint>{{ form.summary.length }}/500</template></UFormField>
           </div>
-        </template>
-        <ClientOnly>
-          <MarkdownEditor ref="editor" v-model="form.contentMarkdown" @fullscreen-change="isFullscreen = $event" />
-          <template #fallback><div class="editor-loading"><UIcon name="i-lucide-loader-circle" class="loading-icon" /><span>编辑器加载中…</span></div></template>
-        </ClientOnly>
-      </UCard>
-    </main>
+        </UCard>
 
-    <aside class="post-options">
-      <UCard class="publish-card">
-        <template #header><div class="side-heading"><span>发布设置</span><UIcon name="i-lucide-send" /></div></template>
-        <div class="option-stack">
-          <div class="publish-state"><span class="status-dot" :class="{ 'status-dot--muted': form.status === 'ARCHIVED' }" /><div><strong>{{ form.status === 'PUBLISHED' ? '公开发布' : '已下线' }}</strong><p>{{ form.status === 'PUBLISHED' ? '文章对所有访客可见' : '文章仅在后台保留' }}</p></div></div>
-          <UButton type="submit" block size="lg" icon="i-lucide-save" :loading="pending">{{ props.post ? '保存修改' : '保存并发布' }}</UButton>
-          <UButton v-if="props.post && form.status === 'PUBLISHED'" type="button" block color="neutral" variant="outline" :loading="pending" @click="save('ARCHIVED')">下线文章</UButton>
-          <UButton v-if="props.post && form.status === 'ARCHIVED'" type="button" block color="primary" variant="outline" :loading="pending" @click="save('PUBLISHED')">重新发布</UButton>
-          <p class="shortcut-hint"><kbd>Ctrl</kbd><span>+</span><kbd>S</kbd><span>快速保存</span></p>
-        </div>
-      </UCard>
-
-      <UCard>
-        <template #header><div class="side-heading"><span>文章标签</span><UIcon name="i-lucide-tags" /></div></template>
-        <div v-if="tags.length" class="tag-list">
-          <label v-for="tag in tags" :key="tag.id" class="tag-option" :class="{ 'tag-option--active': form.tagIds.includes(tag.id) }"><input v-model="form.tagIds" type="checkbox" :value="tag.id"><span>{{ tag.name }}</span><UIcon v-if="form.tagIds.includes(tag.id)" name="i-lucide-check" /></label>
-        </div>
-        <div v-else class="empty-tags"><UIcon name="i-lucide-tag" /><p>暂无标签，可在标签管理中创建。</p></div>
-      </UCard>
-
-      <UCard>
-        <template #header><div class="side-heading"><span>封面与 SEO</span><UIcon name="i-lucide-sparkles" /></div></template>
-        <div class="option-stack">
-          <UFormField label="封面 URL">
-            <div class="cover-field">
-              <UInput v-model="form.coverImageUrl" type="url" class="w-full" placeholder="https://..." />
-              <UButton type="button" color="neutral" variant="soft" :loading="uploadingCover" icon="i-lucide-upload" @click="pickCover">上传</UButton>
+        <UCard class="editor-card" :ui="{ root: 'editor-card', body: 'p-0 sm:p-0 editor-card-body', header: 'editor-card-head' }">
+          <template #header>
+            <div class="editor-toolbar">
+              <div><strong>Markdown 正文</strong><span>{{ wordCount }} 字 · 约 {{ readingTime }} 分钟阅读</span></div>
+              <div class="editor-actions">
+                <UButton type="button" size="sm" color="neutral" variant="soft" :icon="isFullscreen ? 'i-lucide-minimize-2' : 'i-lucide-maximize-2'" @click="toggleFullscreen">{{ isFullscreen ? '退出全屏' : '全屏编辑' }}</UButton>
+                <UButton type="button" size="sm" color="neutral" variant="soft" icon="i-lucide-image-plus" :loading="uploadingImages" @click="pickImages">上传图片</UButton>
+              </div>
             </div>
-          </UFormField>
-          <div v-if="form.coverImageUrl" class="cover-preview"><img :src="form.coverImageUrl" alt="文章封面预览"></div>
-          <UFormField label="SEO 标题"><UInput v-model="form.seoTitle" maxlength="200" class="w-full" /><template #hint>{{ form.seoTitle.length }}/200</template></UFormField>
-          <UFormField label="SEO 描述"><UTextarea v-model="form.seoDescription" maxlength="500" :rows="4" class="w-full" /><template #hint>{{ form.seoDescription.length }}/500</template></UFormField>
-        </div>
-      </UCard>
-    </aside>
+          </template>
+          <ClientOnly>
+            <MarkdownEditor ref="editor" v-model="form.contentMarkdown" @fullscreen-change="isFullscreen = $event" />
+            <template #fallback><div class="editor-loading"><UIcon name="i-lucide-loader-circle" class="loading-icon" /><span>编辑器加载中…</span></div></template>
+          </ClientOnly>
+        </UCard>
+      </main>
+
+      <aside class="post-options">
+        <UCard>
+          <template #header><div class="side-heading"><span>文章标签</span><UIcon name="i-lucide-tags" /></div></template>
+          <div v-if="tags.length" class="tag-list">
+            <label v-for="tag in tags" :key="tag.id" class="tag-option" :class="{ 'tag-option--active': form.tagIds.includes(tag.id) }"><input v-model="form.tagIds" type="checkbox" :value="tag.id"><span>{{ tag.name }}</span><UIcon v-if="form.tagIds.includes(tag.id)" name="i-lucide-check" /></label>
+          </div>
+          <div v-else class="empty-tags"><UIcon name="i-lucide-tag" /><p>暂无标签，可在标签管理中创建。</p></div>
+        </UCard>
+
+        <UCard>
+          <template #header><div class="side-heading"><span>封面与 SEO</span><UIcon name="i-lucide-sparkles" /></div></template>
+          <div class="option-stack">
+            <UFormField label="封面 URL">
+              <div class="cover-field">
+                <UInput v-model="form.coverImageUrl" type="url" class="w-full" placeholder="https://..." />
+                <UButton type="button" color="neutral" variant="soft" :loading="uploadingCover" icon="i-lucide-upload" @click="pickCover">上传</UButton>
+              </div>
+            </UFormField>
+            <div v-if="form.coverImageUrl" class="cover-preview"><img :src="form.coverImageUrl" alt="文章封面预览"></div>
+            <UFormField label="SEO 标题"><UInput v-model="form.seoTitle" maxlength="200" class="w-full" /><template #hint>{{ form.seoTitle.length }}/200</template></UFormField>
+            <UFormField label="SEO 描述"><UTextarea v-model="form.seoDescription" maxlength="500" :rows="4" class="w-full" /><template #hint>{{ form.seoDescription.length }}/500</template></UFormField>
+          </div>
+        </UCard>
+      </aside>
+    </div>
   </form>
 </template>
 
 <style scoped>
 .post-form {
-  display: grid;
+  --post-bar-height: 48px;
   width: 100%;
-  grid-template-columns: minmax(0,1fr);
-  gap: 24px;
-  align-items: start;
+}
+
+.post-bar {
+  position: sticky;
+  top: var(--admin-header-height, 60px);
+  z-index: 6;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  background: var(--admin-bg, var(--color-background));
+  box-shadow: 0 1px 0 var(--color-border);
+}
+
+.bar-state {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.bar-state strong {
+  font-size: 13px;
+  font-weight: 680;
+}
+
+.bar-meta {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.bar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.post-body {
+  display: grid;
+  gap: 20px;
+  margin-top: 16px;
 }
 
 .post-editor-column,.post-options,.content-fields,.option-stack {
@@ -254,8 +301,28 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
 }
 
 .post-options {
-  grid-template-columns: repeat(3,minmax(0,1fr));
+  grid-template-columns: repeat(2,minmax(0,1fr));
   align-items: start;
+}
+
+.editor-card {
+  overflow: visible;
+}
+
+.editor-card :deep(.editor-card-body) {
+  overflow: hidden;
+  border-bottom-left-radius: inherit;
+  border-bottom-right-radius: inherit;
+}
+
+.editor-card :deep(.editor-card-head) {
+  position: sticky;
+  top: calc(var(--admin-header-height, 60px) + var(--post-bar-height));
+  z-index: 5;
+  background: var(--ui-bg, var(--admin-surface, #fff));
+  border-top-left-radius: inherit;
+  border-top-right-radius: inherit;
+  box-shadow: 0 1px 0 var(--color-border), 0 10px 16px -16px rgb(0 0 0 / 55%);
 }
 
 .card-heading,.editor-toolbar,.side-heading {
@@ -322,31 +389,10 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
   color: var(--color-text-secondary);
 }
 
-.publish-state {
-  display: flex;
-  gap: 10px;
-  padding: 12px;
-  border: 1px solid var(--color-border);
-  border-radius: 10px;
-  background: var(--color-background-secondary);
-}
-
-.publish-state strong {
-  display: block;
-  font-size: 12px;
-}
-
-.publish-state p {
-  margin: 3px 0 0;
-  color: var(--color-text-secondary);
-  font-size: 12px;
-}
-
 .status-dot {
   width: 8px;
   height: 8px;
   flex: 0 0 auto;
-  margin-top: 4px;
   border-radius: 50%;
   background: #20a77c;
   box-shadow: 0 0 0 3px rgba(32,167,124,.13);
@@ -355,25 +401,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
 .status-dot--muted {
   background: #8b95a5;
   box-shadow: 0 0 0 3px rgba(139,149,165,.13);
-}
-
-.shortcut-hint {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  margin: 0;
-  color: var(--color-text-secondary);
-  font-size: 10px;
-}
-
-.shortcut-hint kbd {
-  padding: 2px 5px;
-  border: 1px solid var(--color-border);
-  border-bottom-width: 2px;
-  border-radius: 4px;
-  background: var(--color-background-secondary);
-  font-family: inherit;
 }
 
 .tag-list {
@@ -448,6 +475,11 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
   min-width: 0;
 }
 
+.cover-field :deep(button) {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
 .hidden-input {
   display: none;
 }
@@ -462,19 +494,25 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
   .post-options {
     grid-template-columns: repeat(2,minmax(0,1fr));
   }
-
-  .publish-card {
-    grid-column: 1/-1;
-  }
 }
 
 @media (max-width: 700px) {
+  .post-form {
+    --post-bar-height: 80px;
+  }
+
   .post-options {
     grid-template-columns: 1fr;
   }
 
-  .publish-card {
-    grid-column: auto;
+  .bar-actions {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .bar-actions > * {
+    flex: 1 1 auto;
+    justify-content: center;
   }
 
   .editor-toolbar {
