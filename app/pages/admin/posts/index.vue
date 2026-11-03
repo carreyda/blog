@@ -31,6 +31,8 @@ const query = computed(() => ({
 const { data: response, pending, refresh } = await useFetch<{ data: { items: Post[]; total: number; pageSize: number } }>('/api/admin/posts', { query })
 const posts = computed(() => response.value?.data.items || [])
 const total = computed(() => response.value?.data.total || 0)
+const pageSize = computed(() => response.value?.data.pageSize || 20)
+const rowNumber = (index: number) => (page.value - 1) * pageSize.value + index + 1
 const formatDate = (value: string) => new Date(value).toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' })
 
 // Text sorts start at A, dates and counts start at the newest/largest.
@@ -101,6 +103,8 @@ async function remove(post: Post) {
         <table>
           <thead>
             <tr>
+              <th class="col-index">序号</th>
+              <th class="col-id">ID</th>
               <th :aria-sort="ariaSort('title')">
                 <button type="button" class="th-sort" :class="{ 'is-active': sort === 'title' }" @click="toggleSort('title')">
                   文章
@@ -130,7 +134,9 @@ async function remove(post: Post) {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="post in posts" :key="post.id">
+            <tr v-for="(post, index) in posts" :key="post.id">
+              <td class="col-index">{{ rowNumber(index) }}</td>
+              <td class="col-id">{{ post.id }}</td>
               <td>
                 <NuxtLink :to="`/admin/posts/${post.id}/edit`" class="post-title">{{ post.title }}</NuxtLink>
                 <div class="post-tags"><span v-for="tag in post.tags" :key="tag.id">{{ tag.name }}</span><span v-if="!post.tags.length">无标签</span></div>
@@ -175,7 +181,17 @@ async function remove(post: Post) {
 .result-count { margin-left: auto; color: var(--admin-muted); font-size: 12px; white-space: nowrap; }
 
 .table-scroll { width: 100%; overflow: auto; max-height: calc(100vh - var(--admin-header-height) - 220px); }
-table { width: 100%; min-width: 880px; border-collapse: separate; border-spacing: 0; }
+table { width: 100%; min-width: 1000px; table-layout: fixed; border-collapse: separate; border-spacing: 0; }
+/* Fixed layout keeps the numeric columns at a stable width no matter how short the
+   current titles are; the title column takes whatever is left. */
+th:nth-child(1) { width: 64px; }
+th:nth-child(2) { width: 72px; }
+th:nth-child(3) { width: auto; }
+th:nth-child(4) { width: 96px; }
+th:nth-child(5) { width: 96px; }
+th:nth-child(6) { width: 112px; }
+th:nth-child(7) { width: 112px; }
+th:nth-child(8) { width: 84px; }
 thead th {
   position: sticky;
   top: 0;
@@ -187,6 +203,8 @@ th { padding: 0 16px; border-bottom: 1px solid var(--admin-border); color: var(-
 th:last-child { width: 76px; }
 td { padding: 12px 16px; border-bottom: 1px solid var(--admin-border); color: var(--admin-body); font-size: 12px; vertical-align: middle; white-space: nowrap; }
 .col-num { text-align: right; }
+.col-index,
+.col-id { text-align: right; color: var(--admin-muted); font-variant-numeric: tabular-nums; }
 .col-num .th-sort { justify-content: flex-end; }
 td.col-num .metric { width: 100%; justify-content: flex-end; }
 
@@ -213,7 +231,7 @@ tbody tr:last-child td { border-bottom: 0; }
 tbody tr:hover { background: var(--admin-hover); }
 td:first-child { width: 100%; white-space: normal; }
 .cell-time { color: var(--admin-muted); }
-.post-title { color: var(--admin-text); font-size: 14px; font-weight: 600; line-height: 1.4; text-decoration: none; }
+.post-title { display: block; overflow: hidden; color: var(--admin-text); font-size: 14px; font-weight: 600; line-height: 1.4; text-decoration: none; text-overflow: ellipsis; }
 .post-title:hover { color: var(--admin-accent-text); }
 .post-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .post-tags span { color: var(--admin-faint); font-size: 12px; }
