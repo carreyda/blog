@@ -228,7 +228,9 @@ body:has(.article-page) {
 
 .article-side {
   position: sticky;
-  top: calc(var(--site-header-height) + 20px);
+  /* Keep the resting offset (12px page padding + 48px main margin) so the column pins in
+     place instead of sliding 40px up the moment it becomes sticky. */
+  top: calc(var(--site-header-height) + 60px);
   display: grid;
   grid-area: side;
   gap: 12px;
