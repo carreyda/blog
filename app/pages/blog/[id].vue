@@ -230,7 +230,8 @@ body:has(.article-page) {
   position: sticky;
   /* Keep the resting offset (12px page padding + 48px main margin) so the column pins in
      place instead of sliding 40px up the moment it becomes sticky. */
-  top: calc(var(--site-header-height) + 60px);
+  --side-top: calc(var(--site-header-height) + 60px);
+  top: var(--side-top);
   display: grid;
   grid-area: side;
   gap: 12px;
@@ -290,17 +291,14 @@ body:has(.article-page) {
 
 .toc {
   display: grid;
-  max-height: calc(100vh - var(--site-header-height) - 200px);
+  /* Room for the card chrome and the related list below, so the whole column still fits
+     under the header instead of running off the bottom of the screen. */
+  max-height: calc(100vh - var(--side-top) - 250px);
   gap: 8px;
   padding: 2px 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  scrollbar-width: none;
   font-size: 12px;
-}
-
-.toc::-webkit-scrollbar {
-  display: none;
 }
 
 .toc a {
@@ -458,6 +456,12 @@ body:has(.article-page) {
   .article-side {
     position: static;
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  }
+
+  .toc {
+    max-height: calc(100vh - var(--site-header-height) - 200px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 }
 
