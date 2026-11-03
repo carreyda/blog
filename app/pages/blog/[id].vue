@@ -47,6 +47,9 @@ useSeoMeta({
 <template>
   <div class="article-page" :class="{ 'is-solo': !hasSide }">
     <aside class="article-rail" aria-label="阅读工具">
+      <NuxtLink to="/blog" class="rail-button" aria-label="返回文章列表" title="返回文章列表">
+        <UIcon name="i-lucide-arrow-left" />
+      </NuxtLink>
       <button
         type="button"
         class="rail-button"
@@ -139,9 +142,11 @@ body:has(.article-page) {
 
 .article-rail {
   position: sticky;
-  top: calc(50vh - 40px);
+  top: calc(50vh - 44px);
   display: grid;
   grid-area: rail;
+  gap: 10px;
+  align-content: start;
   justify-items: center;
 }
 
