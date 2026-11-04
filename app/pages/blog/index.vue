@@ -123,9 +123,11 @@ function tagLink(slug?: string) {
 
 .blog-sidebar {
   position: sticky;
-  top: calc(var(--site-header-height) + 26px);
+  /* Match the resting offset (48px main margin) so the column pins in place instead of
+     sliding 22px up the moment it becomes sticky. */
+  top: calc(var(--site-header-height) + 48px);
   align-self: start;
-  max-height: calc(100vh - var(--site-header-height) - 52px);
+  max-height: calc(100vh - var(--site-header-height) - 72px);
   padding-right: 4px;
   overflow-y: auto;
   overscroll-behavior: contain;

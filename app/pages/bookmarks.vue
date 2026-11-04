@@ -117,9 +117,10 @@ useSeoMeta({ title: '收藏', description: '按分类整理的实用网站、开
 
 .bookmarks-sidebar {
   position: sticky;
-  top: calc(var(--site-header-height) + 26px);
+  /* Same resting offset as the blog list, so it pins instead of sliding up on scroll. */
+  top: calc(var(--site-header-height) + 48px);
   align-self: start;
-  max-height: calc(100vh - var(--site-header-height) - 52px);
+  max-height: calc(100vh - var(--site-header-height) - 72px);
   padding-right: 4px;
   overflow-y: auto;
   overscroll-behavior: contain;
