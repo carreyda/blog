@@ -197,7 +197,7 @@ thead th {
   top: 0;
   z-index: 2;
   background: var(--admin-surface);
-  box-shadow: inset 0 -1px 0 var(--admin-border), 0 6px 8px -8px rgb(0 0 0 / 45%);
+  box-shadow: inset 0 -1px 0 var(--admin-border);
 }
 th { padding: 0 16px; border-bottom: 1px solid var(--admin-border); color: var(--admin-muted); font-size: 12px; font-weight: 600; text-align: left; white-space: nowrap; }
 th:last-child { width: 76px; }
