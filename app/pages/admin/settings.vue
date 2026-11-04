@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 type SiteSettings = {
   siteName: string
   personName: string
@@ -93,6 +93,10 @@ async function save() {
       </div>
 
       <aside class="settings-aside">
+        <div class="save-panel">
+          <p class="save-message">修改将在保存后应用到网站。</p>
+          <UButton type="submit" block size="lg" icon="i-lucide-save" :loading="pending">保存设置</UButton>
+        </div>
         <UCard class="preview-card">
           <template #header><strong>品牌预览</strong></template>
           <div class="brand-preview"><div class="brand-mark"><img v-if="form.logoUrl" :src="form.logoUrl" alt="Logo 预览"><span v-else>//</span></div><div><strong>{{ form.siteName || 'Blog' }}</strong><p>{{ form.siteDescription || '你的个人博客描述' }}</p></div></div>
@@ -100,11 +104,6 @@ async function save() {
         </UCard>
         <UCard class="asset-card"><template #header><strong>品牌资源</strong></template><div class="fields"><UFormField label="头像 URL"><UInput v-model="form.avatarUrl" class="w-full" /></UFormField><UFormField label="Logo URL"><UInput v-model="form.logoUrl" class="w-full" /></UFormField></div></UCard>
       </aside>
-
-      <div class="save-bar">
-        <div class="save-message">修改将在保存后应用到网站。</div>
-        <UButton type="submit" size="lg" icon="i-lucide-save" :loading="pending">保存设置</UButton>
-      </div>
     </form>
   </section>
 </template>
@@ -256,29 +255,20 @@ async function save() {
   font-weight: 700;
 }
 
-.save-bar {
-  position: sticky;
-  z-index: 5;
-  bottom: 16px;
-  grid-column: 1/-1;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 12px 14px 12px 18px;
+.save-panel {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
   border: 1px solid var(--color-border);
   border-radius: 14px;
-  background: color-mix(in srgb,var(--color-background) 92%,transparent);
-  box-shadow: 0 12px 36px rgba(15,23,42,.1);
-  backdrop-filter: blur(18px);
+  background: var(--color-background);
 }
 
 .save-message {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  margin: 0;
   color: var(--color-text-secondary);
   font-size: 12px;
+  line-height: 18px;
 }
 
 @media (max-width: 1100px) {
@@ -290,6 +280,10 @@ async function save() {
     position: static;
     grid-template-columns: repeat(2,minmax(0,1fr));
   }
+
+  .save-panel {
+    grid-column: 1/-1;
+  }
 }
 
 @media (max-width: 680px) {
@@ -299,19 +293,6 @@ async function save() {
 
   .field-wide {
     grid-column: auto;
-  }
-
-  .save-bar {
-    bottom: 8px;
-  }
-
-  .save-message {
-    display: none;
-  }
-
-  .save-bar :deep(button) {
-    width: 100%;
-    justify-content: center;
   }
 }
 </style>
