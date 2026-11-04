@@ -107,6 +107,16 @@ onBeforeUnmount(() => {
 const clockText = computed(() => now.value.toLocaleTimeString('zh-CN', { hour12: false }))
 
 const timeProgress = computed(() => {
+  /* Before hydration the server cannot know the visitor's clock, so the rows
+     keep their shape with placeholders instead of jumping in after mount. */
+  if (!mounted.value) {
+    return [
+      { label: '本周还剩', left: null as number | null, percent: 0, note: '已过 — / 7 天' },
+      { label: '本月还剩', left: null as number | null, percent: 0, note: '已过 — / — 天' },
+      { label: '本年还剩', left: null as number | null, percent: 0, note: '已过 — / — 天' },
+    ]
+  }
+
   const date = now.value
   const dayFraction = (date.getHours() * 3600 + date.getMinutes() * 60 + date.getSeconds()) / 86400
   const mondayIndex = (date.getDay() + 6) % 7
@@ -202,6 +212,27 @@ const chart = computed(() => {
         </ul>
       </div>
     </header>
+
+    <section class="panel bars-panel">
+      <header class="panel-head">
+        <span class="panel-icon"><UIcon name="i-lucide-clock" /></span>
+        <div class="panel-titles">
+          <h2>时间进度</h2>
+          <p>本周、本月、本年走过的比例</p>
+        </div>
+        <time class="panel-clock">{{ mounted ? clockText : '--:--:--' }}</time>
+      </header>
+      <div class="bars">
+        <div v-for="item in timeProgress" :key="item.label" class="bar-row">
+          <div class="bar-head">
+            <span>{{ item.label }}</span>
+            <strong>{{ item.left === null ? '—' : `${item.left} 天` }}</strong>
+          </div>
+          <div class="bar-track"><span class="bar-fill" :style="{ width: `${item.percent}%` }" /></div>
+          <p class="bar-note">{{ item.note }}</p>
+        </div>
+      </div>
+    </section>
 
     <div class="metrics">
       <article class="metric">
@@ -365,27 +396,6 @@ const chart = computed(() => {
           <div class="bar-head"><span>Top 5 流量占比</span><strong>{{ topFiveShare }}%</strong></div>
           <div class="bar-track"><span class="bar-fill" :style="{ width: `${topFiveShare}%` }" /></div>
           <p class="bar-note">{{ formatNumber(topFiveViews) }} / {{ formatNumber(data.totalViews) }} 次</p>
-        </div>
-      </div>
-    </section>
-
-    <section v-if="mounted" class="panel bars-panel">
-      <header class="panel-head">
-        <span class="panel-icon"><UIcon name="i-lucide-clock" /></span>
-        <div class="panel-titles">
-          <h2>时间进度</h2>
-          <p>本周、本月、本年走过的比例</p>
-        </div>
-        <time class="panel-clock">{{ clockText }}</time>
-      </header>
-      <div class="bars">
-        <div v-for="item in timeProgress" :key="item.label" class="bar-row">
-          <div class="bar-head">
-            <span>{{ item.label }}</span>
-            <strong>{{ item.left }} 天</strong>
-          </div>
-          <div class="bar-track"><span class="bar-fill" :style="{ width: `${item.percent}%` }" /></div>
-          <p class="bar-note">{{ item.note }}</p>
         </div>
       </div>
     </section>
