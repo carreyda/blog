@@ -180,7 +180,9 @@ const filteredBookmarks = computed(() => {
 })
 
 /* View state is remembered per browser so the panel reopens the way it was left. */
-const viewMode = useCookie<'list' | 'table'>('admin-bookmarks-view', { default: () => 'list' })
+const viewMode = useCookie<'list' | 'grid'>('admin-bookmarks-view', { default: () => 'list' })
+/* Older sessions stored a "table" mode; it was replaced by the card grid. */
+if ((viewMode.value as string) === 'table') viewMode.value = 'grid'
 const groupedView = useCookie<boolean>('admin-bookmarks-grouped', { default: () => false })
 
 const bookmarkGroups = computed(() => {
@@ -238,7 +240,10 @@ function onBookmarkDragOver(event: DragEvent, bookmark: Bookmark) {
   event.preventDefault()
   if (event.dataTransfer) event.dataTransfer.dropEffect = 'move'
   const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
-  dropPosition.value = event.clientY - rect.top < rect.height / 2 ? 'before' : 'after'
+  /* Rows split on the vertical midpoint; cards sit in a grid, so they split sideways. */
+  dropPosition.value = viewMode.value === 'grid'
+    ? (event.clientX - rect.left < rect.width / 2 ? 'before' : 'after')
+    : (event.clientY - rect.top < rect.height / 2 ? 'before' : 'after')
   dropTargetId.value = bookmark.id
 }
 
@@ -283,7 +288,12 @@ async function persistBookmarkOrder(ids: number[], scope: Bookmark[]) {
   if (!session.value) return
   // Reuse the slots the moved rows already occupy so hidden rows and other
   // categories keep their numeric position.
-  const slots = scope.map(item => item.sort).sort((left, right) => left - right)
+  const raw = scope.map(item => item.sort).sort((left, right) => left - right)
+  const unique = raw.every((value, index) => index === 0 || value !== raw[index - 1])
+  /* Sorts are per category, so an ungrouped list can hold duplicates. Ties fall
+     back to id order and would shuffle rows the user never touched, so renumber
+     the visible range when that happens. */
+  const slots = unique ? raw : raw.map((_, index) => (raw[0] ?? 0) + index)
   const ordered = ids.map((id, index) => ({ id, sort: slots[index] ?? index }))
   const sortById = new Map(ordered.map(entry => [entry.id, entry.sort]))
   const previous = bookmarks.value
@@ -531,12 +541,12 @@ function markIconBroken(id: number) {
                   />
                   <UButton
                     size="xs"
-                    :color="viewMode === 'table' ? 'primary' : 'neutral'"
-                    :variant="viewMode === 'table' ? 'soft' : 'ghost'"
-                    icon="i-lucide-table"
-                    aria-label="表格视图"
-                    :aria-pressed="viewMode === 'table'"
-                    @click="viewMode = 'table'"
+                    :color="viewMode === 'grid' ? 'primary' : 'neutral'"
+                    :variant="viewMode === 'grid' ? 'soft' : 'ghost'"
+                    icon="i-lucide-layout-grid"
+                    aria-label="卡片视图"
+                    :aria-pressed="viewMode === 'grid'"
+                    @click="viewMode = 'grid'"
                   />
                 </div>
                 <UButton
@@ -601,48 +611,43 @@ function markIconBroken(id: number) {
               </article>
             </div>
 
-            <div v-else class="bookmark-table-scroll">
-              <table class="bookmark-table">
-                <thead>
-                  <tr><th>收藏</th><th>分类</th><th>网址</th><th class="col-num">排序</th><th class="col-actions" aria-label="操作" /></tr>
-                </thead>
-                <tbody>
-                  <tr
-                    v-for="bookmark in section.items"
-                    :key="bookmark.id"
-                    draggable="true"
-                    :class="{
-                      'is-dragging': draggingBookmarkId === bookmark.id,
-                      'is-drop-before': dropTargetId === bookmark.id && dropPosition === 'before',
-                      'is-drop-after': dropTargetId === bookmark.id && dropPosition === 'after',
-                    }"
-                    @dragstart="onBookmarkDragStart($event, bookmark)"
-                    @dragover="onBookmarkDragOver($event, bookmark)"
-                    @dragleave="onBookmarkDragLeave(bookmark)"
-                    @drop="onBookmarkDrop($event, bookmark)"
-                    @dragend="clearBookmarkDrag"
-                  >
-                    <td class="cell-name">
-                      <span class="drag-handle" title="拖拽调整顺序" aria-hidden="true"><UIcon name="i-lucide-grip-vertical" /></span>
-                      <span class="bookmark-icon">
-                        <img v-if="bookmark.iconUrl && !brokenIcons.has(bookmark.id)" :src="bookmark.iconUrl" alt="" @error="markIconBroken(bookmark.id)">
-                        <UIcon v-else name="i-lucide-globe-2" />
-                      </span>
-                      <span class="cell-name-text">
-                        <strong>{{ bookmark.name }}</strong>
-                        <UBadge :color="bookmark.isVisible ? 'success' : 'neutral'" variant="subtle" size="sm">{{ bookmark.isVisible ? '公开' : '隐藏' }}</UBadge>
-                      </span>
-                    </td>
-                    <td class="cell-path">{{ bookmark.categoryPath }}</td>
-                    <td class="cell-url"><a :href="bookmark.url" target="_blank" rel="noopener noreferrer">{{ bookmark.url }}</a></td>
-                    <td class="col-num">{{ bookmark.sort }}</td>
-                    <td class="col-actions">
-                      <UButton icon="i-lucide-pencil" size="xs" color="neutral" variant="ghost" square :aria-label="`编辑 ${bookmark.name}`" @click="editBookmark(bookmark)" />
-                      <UButton icon="i-lucide-trash-2" size="xs" color="error" variant="ghost" square :aria-label="`删除 ${bookmark.name}`" :loading="deletingBookmarkId === bookmark.id" :disabled="deletingBookmarkId !== null" @click="removeBookmark(bookmark)" />
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+            <div v-else class="bookmark-grid">
+              <article
+                v-for="bookmark in section.items"
+                :key="bookmark.id"
+                class="bookmark-card"
+                draggable="true"
+                :class="{
+                  'is-dragging': draggingBookmarkId === bookmark.id,
+                  'is-drop-before': dropTargetId === bookmark.id && dropPosition === 'before',
+                  'is-drop-after': dropTargetId === bookmark.id && dropPosition === 'after',
+                }"
+                @dragstart="onBookmarkDragStart($event, bookmark)"
+                @dragover="onBookmarkDragOver($event, bookmark)"
+                @dragleave="onBookmarkDragLeave(bookmark)"
+                @drop="onBookmarkDrop($event, bookmark)"
+                @dragend="clearBookmarkDrag"
+              >
+                <header class="card-head">
+                  <span class="bookmark-icon bookmark-icon--card">
+                    <img v-if="bookmark.iconUrl && !brokenIcons.has(bookmark.id)" :src="bookmark.iconUrl" alt="" @error="markIconBroken(bookmark.id)">
+                    <UIcon v-else name="i-lucide-globe-2" />
+                  </span>
+                  <span class="drag-handle card-handle" title="拖拽调整顺序" aria-hidden="true"><UIcon name="i-lucide-grip-vertical" /></span>
+                  <UButton icon="i-lucide-pencil" size="xs" color="neutral" variant="ghost" square :aria-label="`编辑 ${bookmark.name}`" @click="editBookmark(bookmark)" />
+                  <UButton icon="i-lucide-trash-2" size="xs" color="error" variant="ghost" square :aria-label="`删除 ${bookmark.name}`" :loading="deletingBookmarkId === bookmark.id" :disabled="deletingBookmarkId !== null" @click="removeBookmark(bookmark)" />
+                </header>
+                <div class="card-title">
+                  <strong>{{ bookmark.name }}</strong>
+                  <UBadge :color="bookmark.isVisible ? 'success' : 'neutral'" variant="subtle" size="sm">{{ bookmark.isVisible ? '公开' : '隐藏' }}</UBadge>
+                </div>
+                <p class="card-desc">{{ bookmark.description }}</p>
+                <a class="card-url" :href="bookmark.url" target="_blank" rel="noopener noreferrer">{{ bookmark.url }}<UIcon name="i-lucide-external-link" /></a>
+                <footer class="card-foot">
+                  <span class="card-path">{{ bookmark.categoryPath }}</span>
+                  <span>排序 {{ bookmark.sort }}</span>
+                </footer>
+              </article>
             </div>
           </section>
         </div>
@@ -1036,7 +1041,7 @@ function markIconBroken(id: number) {
 }
 
 .bookmark-row:hover .drag-handle,
-.bookmark-table tbody tr:hover .drag-handle,
+.bookmark-card:hover .drag-handle,
 .drag-handle:focus-visible {
   opacity: 1;
 }
@@ -1055,119 +1060,129 @@ function markIconBroken(id: number) {
 }
 
 .bookmark-row.is-dragging,
-.bookmark-table tbody tr.is-dragging {
+.bookmark-card.is-dragging {
   opacity: .45;
 }
 
-.bookmark-row.is-drop-before,
-.bookmark-table tbody tr.is-drop-before {
+.bookmark-row.is-drop-before {
   box-shadow: inset 0 2px 0 var(--color-primary);
 }
 
-.bookmark-row.is-drop-after,
-.bookmark-table tbody tr.is-drop-after {
+.bookmark-row.is-drop-after {
   box-shadow: inset 0 -2px 0 var(--color-primary);
 }
 
-.bookmark-table-scroll {
-  overflow-x: auto;
+.bookmark-card.is-drop-before {
+  box-shadow: inset 2px 0 0 var(--color-primary), 0 0 0 1px var(--color-primary);
 }
 
-.bookmark-table {
-  width: 100%;
-  min-width: 720px;
-  border-collapse: separate;
-  border-spacing: 0;
-  font-size: 11px;
+.bookmark-card.is-drop-after {
+  box-shadow: inset -2px 0 0 var(--color-primary), 0 0 0 1px var(--color-primary);
 }
 
-.bookmark-table thead th {
-  padding: 8px;
-  border-bottom: 1px solid var(--color-border);
-  color: var(--color-text-muted);
-  font-size: 10px;
-  font-weight: 600;
-  text-align: left;
-  white-space: nowrap;
+/* ---------------------------------------------------------- card grid view */
+
+.bookmark-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+  padding: 12px 8px 4px;
 }
 
-.bookmark-table tbody td {
-  padding: 10px 8px;
-  border-top: 1px solid var(--color-border);
-  vertical-align: middle;
+.bookmark-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-background);
+  cursor: grab;
+  transition: border-color .18s ease, box-shadow .18s ease;
 }
 
-.bookmark-table tbody tr:first-child td {
-  border-top: 0;
+.bookmark-card:hover {
+  border-color: color-mix(in srgb, var(--color-primary) 42%, var(--color-border));
+  box-shadow: 0 10px 24px -22px rgb(15 23 42 / 60%);
 }
 
-.bookmark-table tbody tr:hover {
-  background: color-mix(in srgb, var(--color-primary) 4%, transparent);
-}
-
-.bookmark-table .cell-name {
+.card-head {
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-width: 220px;
+  gap: 6px;
 }
 
-.bookmark-table .cell-name .bookmark-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
+.bookmark-icon--card {
+  width: 40px;
+  height: 40px;
+  margin-right: 2px;
 }
 
-.bookmark-table .cell-name .bookmark-icon svg {
-  width: 14px;
-  height: 14px;
+.card-handle {
+  margin-left: auto;
 }
 
-.cell-name-text {
+.card-title {
   display: flex;
   min-width: 0;
   align-items: center;
   gap: 8px;
 }
 
-.cell-name-text strong {
+.card-title strong {
   overflow: hidden;
-  font-size: 12px;
+  color: var(--color-text);
+  font-size: 13px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.cell-path {
+.card-desc {
+  display: -webkit-box;
+  min-height: 32px;
+  margin: 0;
+  overflow: hidden;
   color: var(--color-text-secondary);
-  white-space: nowrap;
+  font-size: 11px;
+  line-height: 16px;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
-.cell-url {
-  max-width: 260px;
-}
-
-.cell-url a {
-  display: block;
+.card-url {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
   overflow: hidden;
   color: var(--color-primary);
+  font-size: 11px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.col-num {
-  width: 56px;
-  text-align: right;
-  white-space: nowrap;
+.card-url svg {
+  flex: 0 0 auto;
+  width: 12px;
+  height: 12px;
 }
 
-.bookmark-table thead .col-actions {
-  width: 72px;
-}
-
-.bookmark-table tbody .col-actions {
+.card-foot {
   display: flex;
-  justify-content: flex-end;
-  gap: 2px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px dashed var(--color-border);
+  color: var(--color-text-muted);
+  font-size: 10px;
+}
+
+.card-path {
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -1182,6 +1197,10 @@ function markIconBroken(id: number) {
 
   .bookmark-row {
     grid-template-columns: 42px minmax(0,1fr) 64px;
+  }
+
+  .bookmark-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
