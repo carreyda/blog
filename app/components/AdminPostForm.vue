@@ -311,9 +311,15 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
 </template>
 
 <style scoped>
+/* The editor page fills the viewport: the bar and title stay put, the editor body is
+   the only thing that scrolls. */
 .post-form {
   --post-bar-height: 48px;
+  display: flex;
+  flex-direction: column;
   width: 100%;
+  height: 100%;
+  min-height: 0;
 }
 
 .post-bar {
@@ -357,9 +363,11 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
 
 .post-body {
   display: grid;
+  flex: 1 1 auto;
   gap: 20px;
+  min-height: 0;
   margin-top: 16px;
-  align-items: start;
+  align-items: stretch;
 }
 
 .post-body.has-panel {
@@ -367,12 +375,15 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
 }
 
 .post-main {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 20px;
   min-width: 0;
+  min-height: 0;
 }
 
 .title-card {
+  flex: 0 0 auto;
   padding: 10px 16px;
   border: 1px solid var(--color-border);
   border-radius: 10px;
@@ -407,20 +418,49 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
   overflow: visible;
 }
 
+/* From tablet landscape up the card fills the remaining viewport and the Vditor is
+   stretched to it, so the editor — not the card — is what scrolls. Below that the
+   page scrolls like any other admin page and Vditor keeps its own fixed height. */
+@media (min-width: 901px) {
+  .editor-card {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .editor-card :deep(.editor-card-body) {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+    border-bottom-left-radius: inherit;
+    border-bottom-right-radius: inherit;
+  }
+
+  .editor-card :deep(.editor-card-body > *) {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .editor-card :deep(.editor-card-body .vditor) {
+    height: 100% !important;
+  }
+}
+
 .editor-card :deep(.editor-card-body) {
-  overflow: hidden;
   border-bottom-left-radius: inherit;
   border-bottom-right-radius: inherit;
 }
 
 .editor-card :deep(.editor-card-head) {
-  position: sticky;
-  top: calc(var(--admin-header-height, 60px) + var(--post-bar-height));
-  z-index: 5;
+  flex: 0 0 auto;
   background: var(--ui-bg, var(--admin-surface, #fff));
   border-top-left-radius: inherit;
   border-top-right-radius: inherit;
-  box-shadow: 0 1px 0 var(--color-border), 0 10px 16px -16px rgb(0 0 0 / 55%);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .editor-toolbar {
@@ -481,11 +521,11 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
 }
 
 .publish-panel {
-  position: sticky;
-  top: calc(var(--admin-header-height, 60px) + var(--post-bar-height));
   display: flex;
-  max-height: calc(100vh - var(--admin-header-height, 60px) - var(--post-bar-height) - 40px);
+  align-self: stretch;
   flex-direction: column;
+  min-height: 0;
+  max-height: none;
   overflow: hidden;
   border: 1px solid var(--color-border);
   border-radius: 10px;
@@ -689,11 +729,28 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
     bottom: 0;
     z-index: 40;
     width: min(420px, 94vw);
+    height: auto;
     max-height: none;
     border-top: 0;
     border-right: 0;
     border-bottom: 0;
     border-radius: 0;
+  }
+}
+
+@media (max-width: 900px) {
+  /* Below this width the whole page scrolls again, like every other admin page. */
+  .post-form {
+    height: auto;
+  }
+
+  .post-body {
+    display: block;
+    margin-top: 16px;
+  }
+
+  .post-body > * + * {
+    margin-top: 20px;
   }
 }
 

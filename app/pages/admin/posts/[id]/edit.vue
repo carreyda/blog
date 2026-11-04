@@ -13,4 +13,16 @@ useSeoMeta({ title: () => `编辑 ${response.value?.data.title || '文章'}` })
   </section>
 </template>
 
-<style scoped>.editor-page{display:grid;gap:16px}</style>
+<style scoped>
+/* Fill the viewport so only the editor body scrolls, not the page. */
+.editor-page {
+  display: grid;
+  gap: 16px;
+  height: calc(100vh - var(--admin-header-height) - 58px);
+  height: calc(100dvh - var(--admin-header-height) - 58px);
+}
+
+@media (max-width: 900px) {
+  .editor-page { height: auto; }
+}
+</style>
