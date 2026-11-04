@@ -717,6 +717,11 @@ onBeforeUnmount(() => {
   object-fit: cover;
 }
 
+/* The uploaded avatar is a transparent PNG, so its plate would show through. */
+.avatar:has(img) {
+  background: transparent;
+}
+
 .account-name {
   max-width: 120px;
   overflow: hidden;

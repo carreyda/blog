@@ -255,6 +255,11 @@ async function save() {
   font-weight: 700;
 }
 
+/* The uploaded avatar is a transparent PNG, so its plate would show through. */
+.avatar-preview:has(img) {
+  background: transparent;
+}
+
 .save-panel {
   display: grid;
   gap: 10px;
