@@ -88,6 +88,47 @@ const festivals = computed(() => {
     }))
 })
 
+/* Live clock: week / month / year progress all roll over at midnight, but the
+   bars advance with the seconds so the panel never looks stale. */
+const now = ref(new Date())
+const mounted = ref(false)
+let clockTimer: ReturnType<typeof setInterval> | undefined
+
+onMounted(() => {
+  mounted.value = true
+  now.value = new Date()
+  clockTimer = setInterval(() => { now.value = new Date() }, 1000)
+})
+
+onBeforeUnmount(() => {
+  if (clockTimer) clearInterval(clockTimer)
+})
+
+const clockText = computed(() => now.value.toLocaleTimeString('zh-CN', { hour12: false }))
+
+const timeProgress = computed(() => {
+  const date = now.value
+  const dayFraction = (date.getHours() * 3600 + date.getMinutes() * 60 + date.getSeconds()) / 86400
+  const mondayIndex = (date.getDay() + 6) % 7
+  const monthDays = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
+  const yearStart = new Date(date.getFullYear(), 0, 1)
+  const yearDays = Math.round((new Date(date.getFullYear() + 1, 0, 1).getTime() - yearStart.getTime()) / 86400000)
+  const dayOfYear = Math.floor((date.getTime() - yearStart.getTime()) / 86400000)
+
+  const build = (label: string, elapsed: number, total: number) => ({
+    label,
+    left: total - elapsed,
+    percent: Math.min(100, Math.max(0, ((elapsed - 1 + dayFraction) / total) * 100)),
+    note: `已过 ${elapsed} / ${total} 天`,
+  })
+
+  return [
+    build('本周还剩', mondayIndex + 1, 7),
+    build('本月还剩', date.getDate(), monthDays),
+    build('本年还剩', dayOfYear + 1, yearDays),
+  ]
+})
+
 /* The analytics endpoint has no per-day series, so the trend panel renders a
    shape scaled to real traffic and is badged as 演示数据 instead of faking a feed. */
 const DEMO_WEIGHTS = [0.72, 0.88, 0.66, 1.06, 1.34, 1.18, 1.46]
@@ -327,6 +368,27 @@ const chart = computed(() => {
         </div>
       </div>
     </section>
+
+    <section v-if="mounted" class="panel bars-panel">
+      <header class="panel-head">
+        <span class="panel-icon"><UIcon name="i-lucide-clock" /></span>
+        <div class="panel-titles">
+          <h2>时间进度</h2>
+          <p>本周、本月、本年走过的比例</p>
+        </div>
+        <time class="panel-clock">{{ clockText }}</time>
+      </header>
+      <div class="bars">
+        <div v-for="item in timeProgress" :key="item.label" class="bar-row">
+          <div class="bar-head">
+            <span>{{ item.label }}</span>
+            <strong>{{ item.left }} 天</strong>
+          </div>
+          <div class="bar-track"><span class="bar-fill" :style="{ width: `${item.percent}%` }" /></div>
+          <p class="bar-note">{{ item.note }}</p>
+        </div>
+      </div>
+    </section>
   </section>
 </template>
 
@@ -475,6 +537,14 @@ th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
 .bar-fill { display: block; height: 100%; border-radius: inherit; background: var(--admin-accent); transition: width var(--admin-duration) var(--admin-ease); }
 .bar-fill--warn { background: color-mix(in oklab, var(--admin-warning) 78%, transparent); }
 .bar-note { margin: 0; color: var(--admin-faint); font-size: 10px; }
+.panel-clock {
+  margin-left: auto;
+  color: var(--admin-text);
+  font-size: 18px;
+  font-weight: 660;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .02em;
+}
 
 @media (max-width: 1180px) {
   .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
