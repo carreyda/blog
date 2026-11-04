@@ -162,7 +162,16 @@ async function remove(post: Post) {
 </template>
 
 <style scoped>
-.posts-page { display: grid; gap: 12px; }
+/* Fill exactly the visible area under the topbar so the page itself never scrolls;
+   the row area inside the table panel is the only scroller. */
+.posts-page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: calc(100vh - var(--admin-header-height) - 58px);
+  height: calc(100dvh - var(--admin-header-height) - 58px);
+}
+.posts-page > * { flex: 0 0 auto; }
 
 .panel { overflow: hidden; border: 1px solid var(--admin-border); border-radius: var(--admin-radius); background: var(--admin-surface); }
 
@@ -180,7 +189,9 @@ async function remove(post: Post) {
 .status-select { width: 136px; }
 .result-count { margin-left: auto; color: var(--admin-muted); font-size: 12px; white-space: nowrap; }
 
-.table-scroll { width: 100%; overflow: auto; max-height: calc(100vh - var(--admin-header-height) - 220px); }
+.table-panel { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; }
+
+.table-scroll { width: 100%; flex: 1 1 auto; min-height: 0; overflow: auto; }
 table { width: 100%; min-width: 1000px; table-layout: fixed; border-collapse: separate; border-spacing: 0; }
 /* Fixed layout keeps the numeric columns at a stable width no matter how short the
    current titles are; the title column takes whatever is left. */
@@ -239,8 +250,8 @@ td:first-child { width: 100%; white-space: normal; }
 .metric :deep(svg) { width: 14px; height: 14px; color: var(--admin-faint); }
 .row-actions { display: flex; justify-content: flex-end; gap: 2px; }
 
-.loading-list { display: grid; gap: 8px; padding: 14px; }
-.empty-state { display: grid; min-height: 320px; place-items: center; align-content: center; gap: 10px; text-align: center; }
+.loading-list { display: grid; flex: 1 1 auto; align-content: start; gap: 8px; padding: 14px; overflow: hidden; }
+.empty-state { display: grid; flex: 1 1 auto; min-height: 320px; place-items: center; align-content: center; gap: 10px; text-align: center; }
 .empty-state>span { display: grid; width: 44px; height: 44px; margin-bottom: 4px; place-items: center; border: 1px solid var(--admin-border); border-radius: 10px; color: var(--admin-muted); }
 .empty-state>span :deep(svg) { width: 20px; height: 20px; }
 .empty-state strong { color: var(--admin-text); font-size: 14px; }
