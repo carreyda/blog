@@ -42,6 +42,52 @@ const lastUpdatedCaption = computed(() => {
   return latest ? `最近更新于 ${formatRecentDate(latest)}` : '还没有更新记录'
 })
 
+/* Countdown chips in the header. Fixed-date festivals are computed from today; the
+   Spring Festival follows the lunar calendar, so its dates are pinned per year
+   instead of being guessed (a missing year simply drops out of the list). */
+const SPRING_FESTIVAL: Record<number, [number, number]> = {
+  2026: [2, 17],
+  2027: [2, 6],
+  2028: [1, 26],
+  2029: [2, 13],
+  2030: [2, 3],
+  2031: [1, 23],
+}
+
+const dayStart = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate())
+
+const festivals = computed(() => {
+  const today = dayStart(new Date())
+  const year = today.getFullYear()
+  const items: { name: string; days: number }[] = []
+
+  const push = (name: string, month: number, day: number, fromYear: number) => {
+    const target = dayStart(new Date(fromYear, month - 1, day))
+    items.push({ name, days: Math.round((target.getTime() - today.getTime()) / 86400000) })
+  }
+
+  for (const [name, month, day] of [['元旦', 1, 1], ['五一', 5, 1], ['十一', 10, 1]] as const) {
+    const passed = dayStart(new Date(year, month - 1, day)) < today
+    push(name, month, day, passed ? year + 1 : year)
+  }
+
+  for (const [fromYear] of [[year], [year + 1]] as const) {
+    const spring = SPRING_FESTIVAL[fromYear]
+    if (!spring) continue
+    if (dayStart(new Date(fromYear, spring[0] - 1, spring[1])) >= today) {
+      push('春节', spring[0], spring[1], fromYear)
+      break
+    }
+  }
+
+  return items
+    .sort((a, b) => a.days - b.days)
+    .map(item => ({
+      ...item,
+      label: item.days === 0 ? `今天就是${item.name}` : `距离${item.name} ${item.days} 天`,
+    }))
+})
+
 /* The analytics endpoint has no per-day series, so the trend panel renders a
    shape scaled to real traffic and is badged as 演示数据 instead of faking a feed. */
 const DEMO_WEIGHTS = [0.72, 0.88, 0.66, 1.06, 1.34, 1.18, 1.46]
@@ -108,6 +154,11 @@ const chart = computed(() => {
       <div>
         <h1>{{ greeting }}，{{ displayName }}</h1>
         <p>{{ drafts ? `${drafts} 篇草稿待完成，` : '' }}{{ lastUpdatedCaption }}。</p>
+        <ul class="dash-hints">
+          <li v-for="(item, index) in festivals" :key="item.name" class="hint-chip" :class="{ 'is-next': index === 0 }">
+            {{ item.label }}
+          </li>
+        </ul>
       </div>
     </header>
 
@@ -285,6 +336,23 @@ const chart = computed(() => {
 .dash-head { padding: 4px 2px 6px; }
 .dash-head h1 { margin: 0; color: var(--admin-text); font-size: 20px; font-weight: 680; letter-spacing: -.02em; }
 .dash-head p { margin: 6px 0 0; color: var(--admin-muted); font-size: 12px; }
+
+.dash-hints { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; padding: 0; list-style: none; }
+.hint-chip {
+  padding: 2px 8px;
+  border: 1px solid var(--admin-border);
+  border-radius: 999px;
+  background: var(--admin-surface);
+  color: var(--admin-muted);
+  font-size: 12px;
+  line-height: 18px;
+}
+.hint-chip.is-next {
+  border-color: var(--admin-accent);
+  background: var(--admin-accent-soft);
+  color: var(--admin-accent-text);
+  font-weight: 600;
+}
 
 /* ------------------------------------------------------------- metric cards */
 .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
