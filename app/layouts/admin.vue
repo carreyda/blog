@@ -407,6 +407,13 @@ onBeforeUnmount(() => {
   object-fit: cover;
 }
 
+/* The avatar PNG is transparent around the character, so the accent fill behind it
+   would show through as a blue plate. Keep the accent only for the CB fallback. */
+.brand-mark:has(img) {
+  background: transparent;
+  box-shadow: none;
+}
+
 .brand-text {
   display: flex;
   min-width: 0;
