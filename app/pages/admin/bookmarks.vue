@@ -183,7 +183,10 @@ const filteredBookmarks = computed(() => {
 const viewMode = useCookie<'list' | 'grid'>('admin-bookmarks-view', { default: () => 'list' })
 /* Older sessions stored a "table" mode; it was replaced by the card grid. */
 if ((viewMode.value as string) === 'table') viewMode.value = 'grid'
-const groupedView = useCookie<boolean>('admin-bookmarks-grouped', { default: () => false })
+const groupedView = useCookie<boolean>('admin-bookmarks-grouped', {
+  // 默认按分类分开，否则所有卡片混在一起看不出归属。
+  default: () => true,
+})
 
 const bookmarkGroups = computed(() => {
   const buckets = new Map<number, { id: number; label: string; name: string; parentPath: string; items: Bookmark[] }>()
@@ -980,7 +983,12 @@ function markIconBroken(id: number) {
 
 .bookmark-sections {
   display: grid;
-  gap: 18px;
+  gap: 20px;
+}
+
+.bookmark-group + .bookmark-group {
+  padding-top: 20px;
+  border-top: 1px solid var(--color-border);
 }
 
 .bookmark-group-head {
