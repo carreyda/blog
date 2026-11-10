@@ -9,22 +9,26 @@
 ### 博客前台
 
 - 首页、文章列表、文章详情、标签、项目、收藏和关于页面
-- 收藏页支持按多级分类浏览、关键词搜索和图标加载失败降级
-- Markdown 渲染、Shiki 代码高亮、目录导航和代码复制
+- 文章页采用「灰底画布 + 居中白卡」版式：左侧圆形工具条（返回列表 / 全屏阅读）、右侧目录卡与相关推荐卡，正文不再重复展示封面
+- 收藏页支持多级分类（可折叠）/ 关键词搜索、分类分组展示与图标加载失败降级
+- Markdown 渲染、Shiki 代码高亮、目录导航、代码复制与图片点击预览
 - 文章标题、摘要和标签搜索
 - 响应式布局以及跟随系统 / 亮色 / 暗黑的三态主题切换
+- 长页面右下角回到顶部按钮、站内统一的 2px 细滚动条
 - 动态 Sitemap、Robots 和基础 SEO 配置
 - 文章及全站访问量统计
 
 ### 管理后台
 
 - 单管理员账号和基于 HttpOnly Cookie 的 Session 鉴权
-- Nuxt UI Dashboard 后台布局：可折叠侧栏、移动端抽屉导航和统一确认弹窗
-- 文章创建、编辑、归档、删除、筛选和搜索
-- Vditor 编辑器：桌面端分屏编辑、窄屏自动切换即时渲染（IR），支持全屏编辑
-- 标签、项目和网站资料管理
-- 收藏分类与收藏条目管理
-- 文章总数、访问量、热门文章等数据概览
+- 自绘后台外壳：可折叠侧栏、顶栏面包屑 / 全屏 / 通知 / 主题色切换 / 账号菜单，移动端抽屉导航
+- 6 套主题色（浅蓝、靛蓝、紫罗兰、苔绿、琥珀、玫瑰），选择存在 Cookie 里，刷新不闪
+- 文章创建、编辑、归档、删除、筛选和搜索；列表支持序号 / ID 列、按标题 / 浏览量 / 更新时间 / 创建时间排序、表头与筛选栏吸顶
+- 文章编辑器：顶部吸顶操作栏 + 右侧发布面板（标签、封面、摘要、SEO），保存后回到列表；Vditor 桌面分屏、窄屏即时渲染（IR），支持全屏编辑
+- 标签、项目（可拖拽排序）和网站资料管理
+- 收藏分类（任意层级、可拖拽）与收藏条目管理，支持按分类分组、列表 / 卡片两种视图、拖拽排序
+- 图片媒体库：上传到腾讯云 COS、裁剪、搜索、格式筛选、列表 / 网格视图、批量删除
+- 工作台：四张指标卡、近 7 天访问趋势、热门文章、最近编辑、内容构成、时间进度与节日倒计时
 
 ### 工程与部署
 
@@ -53,11 +57,13 @@
 .
 ├─ app/                    # 页面、布局、组件、插件和前端样式
 │  ├─ pages/              # 博客前台与管理后台路由
-│  └─ components/         # Markdown 编辑器、图片预览等组件
+│  ├─ components/         # Markdown 编辑器、媒体库、图片预览等组件
+│  ├─ assets/css/         # main.css（全站 + 细滚动条）与 admin-theme.css（后台令牌）
+│  └─ assets/icons/       # 后台图标 SVG，由 nuxt-svgo 自动注册为 <SvgoXxx />
 ├─ server/
 │  ├─ api/                # Nitro API 路由
 │  ├─ middleware/         # 鉴权和安全中间件
-│  └─ utils/              # Prisma、认证、Markdown 等服务端工具
+│  └─ utils/              # Prisma、认证、Markdown、COS 存储等服务端工具
 ├─ shared/schemas/        # 前后端共享的 Zod Schema
 ├─ prisma/                # 数据模型和迁移记录
 ├─ scripts/               # 管理员初始化与资源准备脚本
@@ -111,6 +117,13 @@ Windows PowerShell 也可以运行交互式脚本，它会安全读取数据库�
 | `DATABASE_URL` | 是 | PostgreSQL 连接地址 |
 | `SESSION_SECRET` | 是 | Session 密钥，至少使用 32 个随机字节 |
 | `NUXT_PUBLIC_SITE_URL` | 是 | 网站根地址，本地默认 `http://localhost:3000` |
+| `NUXT_COS_SECRET_ID` | 否 | 腾讯云 CAM SecretId，媒体库上传用 |
+| `NUXT_COS_SECRET_KEY` | 否 | 腾讯云 CAM SecretKey |
+| `NUXT_COS_BUCKET` | 否 | COS 存储桶名称，形如 `blog-1300000000` |
+| `NUXT_COS_REGION` | 否 | COS 存储桶地域，形如 `ap-shanghai` |
+| `NUXT_COS_PUBLIC_BASE_URL` | 否 | 图片公开访问的 CDN / 根地址，用于拼接 `MediaAsset.url` |
+
+`NUXT_COS_*` 全部可选：不配置时后台其它功能照常可用，只有「图片上传」会返回 503 `STORAGE_NOT_CONFIGURED`。接入步骤见 [腾讯云 COS 图片上传接入指南](docs/腾讯云COS图片上传接入指南.md)。
 
 不要提交 `.env`。数据库密码包含 `@`、`:`、`/` 或 `#` 等字符时，需要先进行 URL 编码。
 
@@ -179,5 +192,7 @@ pm2 startOrReload ecosystem.config.cjs --update-env
 - [产品需求文档](docs/个人博客系统_V2_PRD.md)
 - [优化待办清单](docs/优化待办清单.md)
 - [生产部署指南](docs/DEPLOYMENT.md)
+- [收藏模块后端开发指导](docs/收藏模块后端开发指导.md)
+- [腾讯云 COS 图片上传接入指南](docs/腾讯云COS图片上传接入指南.md)
 - [开发约定](CLAUDE.md)
 - [Nginx 配置示例](deploy/nginx-blog.conf.example)

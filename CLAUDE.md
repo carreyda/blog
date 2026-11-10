@@ -35,22 +35,31 @@ Copy `.env.example` to `.env` (or run `.\scripts\configure-local-env.ps1` on Win
 
 Then `pnpm db:generate && pnpm db:migrate && pnpm admin:init`.
 
+Optional — media library / image upload (without these, `POST /api/admin/uploads` returns 503 `STORAGE_NOT_CONFIGURED` and the rest of the admin still works):
+
+- `NUXT_COS_SECRET_ID` / `NUXT_COS_SECRET_KEY` — Tencent Cloud CAM credentials
+- `NUXT_COS_BUCKET` / `NUXT_COS_REGION` — COS bucket name and region
+- `NUXT_COS_PUBLIC_BASE_URL` — public CDN/base URL used to build `MediaAsset.url`
+
 ## Architecture
 
 ### Layers
 
-- `app/` — Nuxt 4 client app: pages, layouts, components, composables, plugins. Public pages use `layouts/default.vue`; `/admin` uses `layouts/admin.vue` (Nuxt UI dashboard shell) and `/admin/login` uses `layouts/admin-auth.vue`.
+- `app/` — Nuxt 4 client app: pages, layouts, components, composables, plugins. Public pages use `layouts/default.vue`; `/admin` uses `layouts/admin.vue` (custom sidebar + topbar, see Admin UI) and `/admin/login` uses `layouts/admin-auth.vue`.
 - `server/api/` — Nitro file-routed API. `server/api/admin/**` is the admin surface, everything else is public.
-- `server/utils/` — auto-imported Nitro helpers: Prisma client (production singleton caveat tracked in the TODO doc), auth/session, markdown rendering, post serializers, settings, validation, rate limiting, `apiError`.
+- `server/utils/` — auto-imported Nitro helpers: Prisma client (production singleton caveat tracked in the TODO doc), auth/session, markdown rendering, post serializers, settings, validation, rate limiting, `apiError`, `bookmarks.ts` (`withCategoryPaths`), `media.ts` (`mediaAssetSelect` / `serializeMediaAsset`), `cos-storage.ts` (Tencent COS upload/delete, `isCosStorageConfigured`).
 - `shared/schemas/` — Zod schemas shared by client forms and server validation; import as `#shared/schemas/<name>`.
 - `prisma/` — schema and migrations. Prisma 7 uses the `@prisma/adapter-pg` driver adapter; the datasource URL is supplied by `prisma.config.ts`, not `schema.prisma`.
 - `server/routes/` — non-API Nitro routes: `sitemap.xml`, `robots.txt`.
 
 ### Admin UI
 
-- `app/layouts/admin.vue` is built from `UDashboardGroup`, `UDashboardSidebar`, `UDashboardPanel`, `UDashboardNavbar` and `UNavigationMenu`. The sidebar collapses on desktop and opens as a slideover on mobile; the component persists size/collapsed state in a cookie.
-- `AdminPageHeader.vue` wraps `UPageHeader`; destructive actions use `AdminConfirmDialog.vue` + `useAdminConfirm` instead of `window.confirm`. Bookmark filters use `USelect`, and empty states use `UEmpty`.
-- The dashboard and post-list tables are still native `<table>` elements; migrating them to `UTable` is tracked in `docs/优化待办清单.md`.
+- `app/layouts/admin.vue` is a **hand-built shell**, not Nuxt UI's dashboard components (there are no `UDashboard*` usages left): a `.admin-side` sidebar (240px, collapsed 72px via cookie `admin-sidebar-collapsed`; drawer under 920px) plus a `.admin-topbar` (collapse toggle, refresh, breadcrumb, fullscreen, notification placeholder, accent picker, color-mode switcher, “新建文章” on the dashboard only, account menu) and `.admin-content`.
+- Icons come from `nuxt-svgo`: any `app/assets/icons/*.svg` is auto-imported as `<SvgoXxx />`. Two required settings — `defaultImport: 'component'` (the default `componentext` wrapper adds `.nuxt-icon--fill`, which turns stroke icons into solid blocks) and `svgoConfig` overriding `removeUselessStrokeAndFill: false` (otherwise `stroke`/`fill` are stripped and `currentColor` stops working).
+- `AdminPageHeader.vue` wraps `UPageHeader`; destructive actions use `AdminConfirmDialog.vue` + `useAdminConfirm` instead of `window.confirm`. Filters use `USelect`, empty states use `UEmpty`.
+- The post list and the dashboard's 热门文章 are still native `<table>` elements — the post list adds a sticky header, `table-layout: fixed` with explicit column widths, sortable headers (server-side `sort` / `order`), and 序号 / ID columns. Migrating to `UTable` is tracked in `docs/优化待办清单.md`.
+- The post editor is a full-height page: a sticky action bar (返回列表 / 下线 / 发布) on top, the editor card filling the rest, and a right-hand publish panel (`发布文章` / `更新文章`) holding tags, cover, summary and SEO. Saving returns to `/admin/posts`.
+- `/admin/media` (导航里叫「图片上传」) is the media library: grid/list views, search, format filter, sort, multi-select delete and upload/crop to COS.
 
 ### Auth and the admin boundary
 
@@ -82,8 +91,13 @@ Then `pnpm db:generate && pnpm db:migrate && pnpm admin:init`.
 
 ### Styling
 
-- `app/assets/css/main.css` imports Tailwind v4 and Nuxt UI, defines the brand palette in `@theme`, and exposes the public site's CSS variables (`--color-*`, `--radius-*`). Public pages use scoped CSS and a monospace aesthetic.
-- Admin styling combines Nuxt UI dashboard components with `--admin-*` variables defined in `app/layouts/admin.vue` and explicit `html.dark` overrides.
+- `app/assets/css/main.css` imports Tailwind v4 and Nuxt UI, defines the brand palette (`@theme static --color-brand-*`), exposes the public site's CSS variables (`--color-*`, `--radius-*`, scrollbar tokens) and the global quiet scrollbar (`::-webkit-scrollbar` 8px track + 2px thumb; the standard `scrollbar-width` fallback is wrapped in `@supports not selector(::-webkit-scrollbar)` because setting it makes Chrome ignore the webkit rules). Public pages use scoped CSS and a monospace aesthetic.
+- `app/assets/css/admin-theme.css` is the admin token layer and loads on every page (it is listed in `nuxt.config.ts` `css`, after `main.css`). It defines all `--admin-*` variables (surface/border/text/radius/duration/shadow), six accent palettes on `html[data-accent='sky' | 'indigo' | 'violet' | 'emerald' | 'amber' | 'rose']` (each `--accent-50..950`), and bridges Nuxt UI to them (`--ui-color-primary-50..950`, `--ui-bg`, `--ui-border`, `--ui-text*`, `--color-primary`) scoped to `.admin`.
+- Accent switching lives in `app/composables/useAdminAccent.ts`: it writes `data-accent` on `<html>` via `useHead` and persists the choice in the cookie `admin-accent` (SSR-safe, no flash). The default is `sky`.
+- Admin dark mode is an explicit `html.dark` override block in `admin-theme.css`; do not rely on Nuxt UI's automatic `-400` shade swap — the accents are tuned per mode there.
+- Styling conventions: spacing/radius/sizes use **even pixel values** (the token layer is built that way); admin surfaces always read `var(--admin-*)` with a `var(--color-*)` fallback so pages keep working under both schemes.
+- Pitfall: Nuxt UI utilities such as `.text-inverted` live in `@layer utilities`, so any *unlayered* global rule (e.g. a bare `a { color: inherit }`) silently beats them. Keep global resets inside `@layer base { … }`.
+- Pitfall: the public site has a global `.brand-mark { transform: skew(-12deg) }` for its `// Blog` lockup. The admin reuses that class name, so the admin rule must set `transform: none` explicitly.
 - Color mode is the three-state `system | light | dark` switcher (`ColorModeSwitcher.vue`); public pages and admin both react to it.
 
 ### Deployment

@@ -140,15 +140,34 @@
 
 ## C.3 图片管理方案
 
-V1 不开发媒体库，不提供图片上传 / 存储 / 管理 / 腾讯云 COS 管理。用户使用已有图床，文章内容以标准 Markdown 图片语法引用：
+V1 曾计划「不做媒体库、只用外部图床」。**这一条已经废弃**：当前已实现完整的媒体库 + 腾讯云 COS 对象存储上传，外部图床仅作为「直接填 URL」的补充方式保留。
 
-```markdown
-![图片描述](https://example.com/image.png)
-```
+**存储**：腾讯云 COS。配置项见 `README.md` 的环境变量表（`NUXT_COS_SECRET_ID` / `NUXT_COS_SECRET_KEY` / `NUXT_COS_BUCKET` / `NUXT_COS_REGION` / `NUXT_COS_PUBLIC_BASE_URL`）。未配置时上传接口返回 503 `STORAGE_NOT_CONFIGURED`，媒体库页面仍可浏览已有图片。
 
-**图片插入交互**：点击「插入图片」→ 弹窗输入图片地址 + 图片描述 → 生成对应 Markdown 语法。
+**数据模型**：`MediaAsset`（`name` / `cosKey`（唯一）/ `url` / `width` / `height` / `bytes` / `format`（PNG / JPG / WEBP / GIF / AVIF）/ `createdAt`）。
 
-**文章封面**：同样使用 URL 字段 `coverImageUrl`（例：`https://xxx.com/cover/nuxt.webp`）。
+**上传**：`POST /api/admin/uploads`（multipart）
+
+- 一次最多 10 张、单张 ≤ 10MB、总量 ≤ 25MB；
+- 按文件头嗅探真实类型，伪装扩展名会被拒（415）；名称经过 `sanitizeMediaName`；
+- 先传 COS 再事务写库；任一步失败都会回滚已上传的对象，避免 COS 与数据库不一致。
+
+**媒体库页面**：`/admin/media`
+
+- 列表视图 / 网格视图切换（cookie `admin-media-view` 记住选择）；
+- 搜索文件名、按格式筛选、按最新 / 最早 / 名称 / 大小排序；
+- 批量勾选后「删除所选」（同时删除 COS 对象与数据库记录）、「取消选择」、「复制链接」；
+- 上传支持多选与拖拽，上传后可裁剪（`AdminImageCropper`）再入库。
+
+**在编辑器里使用**
+
+- 工具栏「插入图片」走媒体库，选中的图片插入标准 Markdown 语法：
+
+  ```markdown
+  ![图片描述](https://example.com/image.png)
+  ```
+
+- 文章封面 `coverImageUrl` 同样可从媒体库选择，也可以直接粘贴外部 URL。
 
 ## C.4 Markdown 编辑器
 
@@ -242,13 +261,23 @@ V1 不开发媒体库，不提供图片上传 / 存储 / 管理 / 腾讯云 COS 
 
 ## D.4 文章详情
 
-路径 `/blog/[id]`，以文章自增 `id` 作为路径标识（不单独维护 slug 字段，省去 slug 生成与唯一性校验）。当前页面包含：标题、摘要、发布时间、阅读时长、标签、封面、正文和 TOC。
+路径 `/blog/[id]`，以文章自增 `id` 作为路径标识（不单独维护 slug 字段，省去 slug 生成与唯一性校验）。
 
-**上一篇 / 下一篇与相关文章（P1，待实现）**：相关文章与当前文章存在共同标签且非本文自身，按共同标签数量降序、发布时间降序排序，展示前 3～5 篇，不做语义相关性算法。
+**当前版式**（参考掘金阅读页）：灰底画布 + 居中的白色文章卡 + 左侧悬浮圆形工具条 + 右侧「目录」「相关推荐」两张卡片。
+
+- 文章卡内依次是：返回文章链接、标题、`发布日期 · N 分钟阅读 · 标签`、摘要、正文；**封面图不在正文里展示**（只在列表卡片和分享卡片中使用）。
+- 正文支持 Shiki 高亮、语言名称、Copy 按钮、横向滚动；Mermaid 代码块由前端插件渲染。
+- 右侧目录卡按标题层级缩进，超过一屏时卡片内部滚动（滚动条隐藏但可滚），默认展开；右侧卡片整体吸顶。
+- 左侧工具条只有两个圆钮：返回文章列表、全屏阅读（全屏按钮与浏览器 Fullscreen API 双向同步）。
+- 手机上右侧两张卡片移到正文上方（目录默认收起），工具条隐藏。
+
+**相关推荐**：当前实现取最新 6 篇的前 4 篇并排除当前文章，**不按共同标签计算**。
+
+**上一篇 / 下一篇（P1，待实现）**：相关文章按共同标签数量降序、发布时间降序取前 3～5 篇，不做语义相关性算法。
 
 **阅读进度（P1，待实现）**：顶部显示细线阅读进度条，颜色 `#4493f8`。
 
-**代码块**：支持 Shiki 高亮、语言名称显示、Copy 按钮、横向滚动；Mermaid 代码块由前端插件渲染。
+**回到顶部**：全站公共布局里有一个圆形按钮，滚动超过 360px 出现，点击平滑回顶（尊重 `prefers-reduced-motion`）。
 
 ## D.5 标签页
 
@@ -264,9 +293,9 @@ V1 不开发媒体库，不提供图片上传 / 存储 / 管理 / 腾讯云 COS 
 
 ## D.8 深色模式与 Design Token
 
-已支持 `System` / `Light` / `Dark` 三态手动切换，用户偏好通过 Nuxt UI 的 `useColorMode` 持久化；主题主色保持 `#4493f8`。
+已支持 `System` / `Light` / `Dark` 三态手动切换，用户偏好通过 Nuxt UI 的 `useColorMode` 持久化；主题主色保持 `#4493f8`（同时作为 `@theme static` 的 `--color-brand-*` 色板，供 `bg-primary-500` 等档位使用）。
 
-基础主题变量（具体 Token 后续在 UI Design 阶段进一步细化）：
+公共站基础主题变量：
 
 ```css
 :root {
@@ -282,28 +311,38 @@ V1 不开发媒体库，不提供图片上传 / 存储 / 管理 / 腾讯云 COS 
   --color-border: #e5e5e5;
 
   --radius-sm: 6px;
-  --radius-md: 8px;
+  --radius-md: 9px;
   --radius-pill: 9999px;
+
+  --scrollbar-thumb: #dbdbe0;
+  --scrollbar-thumb-hover: #c3c3cb;
 }
 ```
+
+`html.dark` 下同名变量整体翻转（`--color-background: #111111`、`--color-background-secondary: #1a1a1a`、`--color-border: #303030`、滚动条 `#3a3d42`）。
+
+**滚动条**：全站统一 8px 轨道 + 2px 可见滑块（`::-webkit-scrollbar` + 3px 透明内边距），无轨道底色。标准属性 `scrollbar-width` 会让 Chrome 忽略 webkit 规则，因此只包在 `@supports not selector(::-webkit-scrollbar)` 里给 Firefox 用。
+
+**后台**另有一套 `--admin-*` 变量与六套主题色，见 E.1 与 `app/assets/css/admin-theme.css`。
 
 ---
 
 # Part E　管理后台（产品 / UX）
 
-后台入口 `/admin`，仅管理员本人使用。管理后台的布局、导航、页头、弹窗、下拉和空状态统一使用 **Nuxt UI** 组件；博客前台不受此约束，可保持独立的极简视觉风格。仪表盘和文章列表的数据表目前仍为原生 `<table>`，后续迁移到 `UTable`。
+后台入口 `/admin`，仅管理员本人使用。后台的**外壳已不依赖 Nuxt UI 的 Dashboard 组件族**（自绘侧栏 + 顶栏），表单控件、弹窗、下拉和空状态仍复用 Nuxt UI；博客前台不受此约束，保持独立的极简视觉风格。仪表盘和文章列表的数据表目前仍为原生 `<table>`，后续迁移到 `UTable`。
 
 ## E.1 后台导航
 
 | 一级 | 二级 |
 |---|---|
-| 仪表盘 | 数据概览与访问统计 |
+| 工作台 | `/admin`，数据概览 |
 | 内容管理 | 文章管理 / 标签管理 / 项目管理 / 收藏管理 |
-| 系统 | 网站设置 |
+| 站点 | 图片上传 / 网站设置 |
 
-- 桌面端使用 `UDashboardSidebar`，支持折叠为图标模式；折叠状态由组件持久化。
-- 移动端使用抽屉式导航，通过顶栏菜单按钮打开，路由切换后自动关闭。
-- 明确**不**包含：媒体库。
+- 侧栏为自绘的 `.admin-side`（不再使用 Nuxt UI 的 `UDashboardSidebar`），桌面端可折叠为 72px 图标栏，折叠状态存在 cookie `admin-sidebar-collapsed`。
+- 顶栏提供：折叠按钮、刷新、面包屑（`首页 / 当前页`，文章新建与编辑为三段）、全屏、通知占位、主题色切换、明暗切换、新建文章（仅工作台显示）、账号菜单。
+- 移动端（≤920px）侧栏改为抽屉，通过顶栏按钮打开，路由切换后自动关闭。
+- **媒体库在导航中名为「图片上传」**（`/admin/media`）。
 
 ## E.2 登录与鉴权
 
@@ -312,58 +351,65 @@ V1 不开发媒体库，不提供图片上传 / 存储 / 管理 / 腾讯云 COS 
 - 登录字段：用户名、密码
 - 登录状态：Session + HttpOnly Cookie（避免将重要认证 Token 保存在 LocalStorage）
 
-## E.3 Dashboard
+## E.3 工作台
 
-路径 `/admin`。
+路径 `/admin`（导航里叫「工作台」）。
 
-**数据卡片**：文章总数、已发布文章、全站总访问量
+自上而下依次是：
 
-**浏览量 Top 5**：文章标题、浏览量（按 `Post.viewCount` 排序取前 5，无需单独的趋势图表）
-
-**最近文章**（最近编辑）：标题、状态、更新时间
+1. **问候与提示**：`晚上好，admin` + 最近更新时间、草稿数；下面一排胶囊显示距离元旦 / 春节 / 五一 / 十一还有多少天（最近的那个高亮）。
+2. **时间进度**：右上角实时时钟（`HH:MM:SS`，每秒刷新），三条进度条显示本周 / 本月 / 本年还剩几天、已过比例。
+3. **四张指标卡**：文章总数、已发布、草稿、总访问量（各自带环比或占比说明）。
+4. **访问趋势**（近 7 天，带「演示数据」角标）+ **最近编辑**（按更新时间排序）。
+5. **热门文章**：标题、状态、浏览量、更新时间（按 `Post.viewCount` 排序取前 5）。
+6. **内容构成**：发布率 / 草稿占比 / Top 5 流量占比，三条进度条。
 
 ## E.4 文章管理
 
 路径 `/admin/posts`
 
-**列表字段**：标题、标签、状态、浏览量、发布时间、更新时间、操作
+**列表字段**：序号、ID、标题（第二行为标签）、状态、浏览量、更新时间、创建时间、操作
+
+**排序**：表头可点击排序（标题 / 浏览量 / 更新时间 / 创建时间），排序由服务端完成，跨分页保持一致；同值时有 `id` 兜底避免抖动。
 
 **搜索**：支持文章标题搜索　|　**筛选**：状态（全部 / 已发布 / 已归档）；标签筛选尚未实现
+
+**布局**：筛选栏与表头吸顶，页面高度固定为视口高度、只有表格区域滚动（`table-layout: fixed` + 每列显式宽度），分页条固定在底部。
 
 **操作**：新建、编辑、下线（归档）、删除。删除采用物理删除，删除前必须二次确认；删除后数据不可恢复。
 
 ### E.4.1 新建文章
 
-路径 `/admin/posts/new`，页面包含：标题、摘要、Markdown 正文、标签、封面 URL、SEO 设置、保存（保存即发布，无草稿状态）。
+路径 `/admin/posts/new`，页面是一个填满视口的两栏结构：左侧标题 + Markdown 编辑器，右侧「发布文章」面板（标签、封面、摘要、SEO）；顶部吸顶操作栏提供「返回列表」和「发布文章」。保存即发布，无草稿状态。
 
 ### E.4.2 编辑文章
 
 路径 `/admin/posts/[id]/edit`，核心布局：
 
 ```text
-┌────────────────────────────────────┐
-│ 标题                               │
-├────────────────────────────────────┤
-│ 编辑器模式                         │
-│ 桌面分屏 / 窄屏即时渲染            │
-├────────────────────────────────────┤
-│ Vditor                             │
-├────────────────────────────────────┤
-│ 全屏编辑                           │
-├────────────────────────────────────┤
-│                    保存并立即生效    │
-└────────────────────────────────────┘
+┌──────────────────────────────────────────────────────┐
+│ ● 已发布  1234 字 · 约 5 分钟     返回列表  下线  更新文章 │ ← 吸顶
+├────────────────────────────────┬─────────────────────┤
+│ 标题（大号无边框输入）            │ 更新文章             │
+│ ┌────────────────────────────┐ │  标签 chips          │
+│ │ Markdown 正文  全屏/上传图片 │ │  文章封面（16:9）     │
+│ │ Vditor（桌面分屏 / 窄屏 IR） │ │  编辑摘要            │
+│ │                            │ │  SEO 设置（折叠）     │
+│ └────────────────────────────┘ │  取消   确定并更新    │
+└────────────────────────────────┴─────────────────────┘
 ```
 
-编辑页头部提供“全屏编辑”按钮；进入全屏后，右下角固定显示“退出全屏”。窄屏下编辑器自动使用 IR 单栏模式，不强制左右分屏。
+编辑器卡内的「Markdown 正文」卡头常驻可见（不再是吸顶浮层），页面本身不滚动，超出部分在编辑器内部滚动。窄屏下恢复为整页滚动、编辑器使用固定高度。
 
-已发布文章可直接进入编辑、修改后保存即时生效，不存在"编辑已发布文章需要先转草稿"这类中间状态。
+已发布文章可直接进入编辑、修改后保存即时生效，不存在“编辑已发布文章需要先转草稿”这类中间状态。
 
 ### E.4.3 保存与发布
 
-系统不提供自动保存和草稿状态。新建文章只有在用户主动点击「保存并发布」后才写入数据库并在前台公开；编辑已发布文章时，用户主动保存后修改立即生效。保存失败时保留当前页面内容并显示错误提示，避免误以为保存成功。
+系统不提供自动保存和草稿状态。新建文章只有在用户主动点击「发布文章 → 确定并发布」后才写入数据库并在前台公开；编辑已发布文章时，保存后修改立即生效并**返回文章列表**。
 
-快捷键 `Ctrl+S` / `Cmd+S` 与页面保存按钮行为一致：新建文章时保存并发布，编辑文章时保存并立即更新线上内容。
+保存前会校验标题和摘要：任一为空时展开右侧发布面板并给出提示，不会静默失败。
+
+快捷键 `Ctrl+S` / `Cmd+S` 与顶部主按钮行为一致：打开发布面板（而不是直接保存），确认后再提交。
 
 ### E.4.4 文章状态
 
@@ -380,23 +426,32 @@ V1 不开发媒体库，不提供图片上传 / 存储 / 管理 / 腾讯云 COS 
 
 ## E.6 项目管理
 
-路径 `/admin/projects`，支持：创建项目、编辑项目、删除项目、修改状态、排序。项目仅用于前台外链卡片，不包含 Slug、详细描述或站内详情页配置。
+路径 `/admin/projects`，支持：创建项目、编辑项目、删除项目、修改状态、排序。
+
+排序两种方式并存：左侧表单里的「排序」数字框（新建时可直接指定），以及右侧卡片的**拖拽排序**（`PATCH /api/admin/projects/reorder`，按 `{ ids }` 下标写 `sort`）。拖拽在触屏上不可用，替代方案见 `docs/优化待办清单.md` 第 16 条。
+
+项目仅用于前台外链卡片，不包含 Slug、详细描述或站内详情页配置。
 
 ## E.7 数据分析
 
-V1 只做最基础的浏览量统计，不做访问趋势图、不做用户画像、不做地域/设备分析：
+V1 只做最基础的浏览量统计，不做用户画像、不做地域 / 设备分析：
 
 - **全站总访问量**：前台任意页面（首页 / 文章 / 标签 / 项目 / 关于）被访问时，全局计数器 `+1`
 - **单篇文章浏览量**：文章详情页访问时，对应 `Post.viewCount + 1`
 - **浏览量 Top 5**：按 `Post.viewCount` 排序取前 5
+- **近 7 天访问趋势**：仪表盘上的面积图。**当前是「演示数据」**——数据库里没有按天的访问明细，图形是前端按 `totalViews` 推算的形状，卡片上带「演示数据」角标。要变成真实曲线，需要新增按天聚合的统计表（见 `docs/优化待办清单.md`）。
 
 两个计数器都采用简单计数，不做去重（不区分独立访客 / 重复访问），接受刷新、机器人访问导致的重复计数，也不记录访问日志明细，避免引入 `visitorId` 生成方式、日志表规模控制等额外复杂度——统计目的是"大致看看"，不是精确分析。
 
-上述统计目前集中展示在 `/admin` 仪表盘（文章总数、已发布数、全站总访问量、浏览量 Top 5 和最近编辑），不单独提供访问统计页面。
+上述统计集中展示在 `/admin` 工作台（四张指标卡、近 7 天访问趋势、热门文章、最近编辑、内容构成、时间进度与节日倒计时），不单独提供访问统计页面。
+
+> 趋势图目前是演示数据（见上一节），其余指标都是真实数据。
 
 ## E.8 网站设置
 
 路径 `/admin/settings`
+
+采用「左侧表单 + 右侧吸顶侧栏」布局：右上角固定一张保存卡（提示文案 + 保存按钮），页面滚动时始终可见；侧栏下方是品牌预览与品牌资源。
 
 | 分类 | 配置项 |
 |---|---|
@@ -405,6 +460,8 @@ V1 只做最基础的浏览量统计，不做访问趋势图、不做用户画�
 | 关于页 | Markdown 正文 |
 | 社交链接 | GitHub、Twitter/X、LinkedIn、掘金、知乎、小红书（固定平台） |
 | SEO | 默认 SEO Title、默认 SEO Description、默认 OG Image |
+
+保存后修改立即应用到前台；刷新页面即可看到。头像、Logo 等图片字段可直接填外链，也可以从媒体库上传后粘贴地址。
 
 ## E.9 收藏管理
 
@@ -416,7 +473,17 @@ V1 只做最基础的浏览量统计，不做访问趋势图、不做用户画�
 - 收藏字段：分类、名称、描述、图标 URL、网站 URL、排序和是否公开；网站 URL 全局唯一，图标 URL 可为空。
 - 调整父级时不能把分类移动到自身或自己的子孙分类下，防止形成循环；移动分类会连同其子分类一起移动。
 - 删除分类前必须先清空其子分类和收藏，接口拒绝非空分类并返回 `409`，数据库外键使用 `Restrict` 兜底。
-- 前台 `/bookmarks` 按分类树展示，只展示 `isVisible = true` 的收藏，并过滤没有可见收藏的空分类；图标 URL 为空或加载失败时显示占位图标。
+
+**视图与排序**
+
+- 列表支持两种视图：列表（每行一条）和**卡片网格**（`minmax(240px, 1fr)` 自动列数），视图选择与「分组」开关都记在 cookie 里（`admin-bookmarks-view`、`admin-bookmarks-grouped`）。
+- 「分组」开启时按分类分段展示，每段一个标题；分段时拖拽只在同分类内生效。
+- 排序支持拖拽：列表视图按上下中线判定插入位置，卡片网格按左右中线；提交到 `PATCH /api/admin/bookmarks/reorder`，只重排当前可见范围占用的 `sort` 槽位，隐藏行不受影响。
+
+**前台 `/bookmarks`**
+
+- 按分类树展示，只展示 `isVisible = true` 的收藏，并过滤没有可见收藏的空分类；图标 URL 为空或加载失败时显示占位图标。
+- 左侧分类树支持点击父分类**折叠/展开**子分类，提供「展开全部 / 收起全部」，搜索时会自动展开所有命中分支。
 
 ---
 
@@ -433,7 +500,7 @@ V1 只做最基础的浏览量统计，不做访问趋势图、不做用户画�
 
 ## F.2 数据库设计
 
-当前核心数据表：`User`、`Session`、`Post`、`Tag`、`PostTag`、`Project`、`SiteSetting`、`SiteStats`、`BookmarkCategory`、`Bookmark`
+当前核心数据表：`User`、`Session`、`Post`、`Tag`、`PostTag`、`Project`、`SiteSetting`、`SiteStats`、`BookmarkCategory`、`Bookmark`、`MediaAsset`
 
 ### F.2.1 枚举
 
@@ -441,6 +508,7 @@ V1 只做最基础的浏览量统计，不做访问趋势图、不做用户画�
 UserRole      = ADMIN
 PostStatus    = PUBLISHED | ARCHIVED
 ProjectStatus = ACTIVE | ARCHIVED | SOLD | BUILDING
+MediaFormat   = PNG | JPG | WEBP | GIF | AVIF
 ```
 
 ### F.2.2 字段与约束
@@ -459,6 +527,7 @@ ProjectStatus = ACTIVE | ARCHIVED | SOLD | BUILDING
 | **SiteStats** | `id Int`、`totalViews Int`、时间字段 | 单行表，固定 `id = 1`；`totalViews = 0`；使用数据库原子自增 |
 | **BookmarkCategory** | `id Int`、`name VarChar(50)`、`parentId Int?`、`sort Int`、时间字段 | `id` 自增主键；`parentId = null` 表示一级分类，支持任意层级；父级删除策略 `Restrict`；`(parentId, name)` 组合唯一（一级分类的 `parentId` 为 `NULL`，重名仍需业务层检查）；索引 `(parentId, sort)`、`(sort, id)` |
 | **Bookmark** | `id Int`、`categoryId Int`、`name VarChar(100)`、`description VarChar(500)`、`iconUrl VarChar(2048)?`、`url VarChar(2048)`、`sort Int`、`isVisible Boolean`、时间字段 | `id` 自增主键；`categoryId` 关联 `BookmarkCategory`，删除策略 `Restrict`；`url` 唯一；`isVisible = true`；索引 `(categoryId, sort)`、`(isVisible, sort)` |
+| **MediaAsset** | `id Int`、`name VarChar(255)`、`cosKey VarChar(512)`、`url VarChar(2048)`、`width Int`、`height Int`、`bytes Int`、`format MediaFormat`、`createdAt DateTime` | `id` 自增主键；`cosKey` 唯一；无 `updatedAt`（上传后不可变更，只增删）；索引 `(createdAt)`、`(format, createdAt)`；对象本体在腾讯云 COS，删表行时同步删对象 |
 
 索引要求：`Session(userId)`、`Session(expiresAt)`、`Post(status, publishedAt)`、`Post(updatedAt)`、`Post(viewCount)`、`Project(status, sort)`、`PostTag(tagId, postId)`、`BookmarkCategory(parentId, sort)`、`BookmarkCategory(sort, id)`、`Bookmark(categoryId, sort)`、`Bookmark(isVisible, sort)`。文章与标签列表默认只读取 `PUBLISHED` 文章；文章排序为 `publishedAt DESC, id DESC`，项目排序为 `sort ASC, id DESC`。
 
@@ -529,7 +598,7 @@ API 统一前缀 `/api`。后台管理接口前缀 `/api/admin`，需登录鉴�
 |---|---|---|
 | Posts | `GET /api/posts` | 文章列表，支持 `?tag=` 按标签 slug 筛选、`?q=` 搜索标题/摘要/标签、`?page=` 与 `?pageSize=` 分页 |
 | | `GET /api/posts/:id` | 文章详情；只返回已发布且存在的文章，读取操作本身不修改计数 |
-| | `GET /api/posts/:id/related` | P1 规划：相关文章（同标签，见 Part D.4 排序规则），当前尚未实现 |
+| | `GET /api/posts/:id/related` | P1 规划：相关文章（同标签，见 Part D.4 排序规则），当前尚未实现；文章页的「相关推荐」是直接复用 `GET /api/posts?pageSize=6` 取最新文章的前 4 篇（排除当前篇） |
 | Tags | `GET /api/tags` | 标签列表（含每个标签下的文章数） |
 | | `GET /api/tags/:slug` | 指定标签下的文章列表 |
 | Projects | `GET /api/projects` | 项目列表 |
@@ -544,13 +613,14 @@ API 统一前缀 `/api`。后台管理接口前缀 `/api/admin`，需登录鉴�
 | 模块 | 接口 |
 |---|---|
 | Auth | `POST /api/auth/login`　`POST /api/auth/logout`　`GET /api/auth/session` |
-| Posts | `GET/POST /api/admin/posts`　`GET/PUT/DELETE /api/admin/posts/:id`（文章的所有状态变更，包括归档下线，统一走 `PUT`；`DELETE` 执行物理删除） |
+| Posts | `GET/POST /api/admin/posts`　`GET/PUT/DELETE /api/admin/posts/:id`（文章的所有状态变更，包括归档下线，统一走 `PUT`；`DELETE` 执行物理删除）；列表支持 `?sort=title\|viewCount\|updatedAt\|createdAt` 与 `?order=asc\|desc`，响应回带实际生效的 `sort` / `order` |
 | 标签 | `GET/POST /api/admin/tags`　`PUT/DELETE /api/admin/tags/:id` |
-| Projects | `GET/POST /api/admin/projects`　`PUT/DELETE /api/admin/projects/:id` |
+| Projects | `GET/POST /api/admin/projects`　`PUT/DELETE /api/admin/projects/:id`　`PATCH /api/admin/projects/reorder` |
 | Settings | `GET/PUT /api/admin/settings`（读取或整体更新 `SiteSetting.value`） |
 | Analytics | `GET /api/admin/analytics/overview`（文章总数、已发布数、全站总访问量、Top 5 文章和最近编辑，一个接口即可） |
 | 收藏分类 | `GET/POST /api/admin/bookmark-categories`　`PUT/DELETE /api/admin/bookmark-categories/:id` |
-| 收藏 | `GET/POST /api/admin/bookmarks`　`PUT/DELETE /api/admin/bookmarks/:id` |
+| 收藏 | `GET/POST /api/admin/bookmarks`　`PUT/DELETE /api/admin/bookmarks/:id`　`PATCH /api/admin/bookmarks/reorder` |
+| 媒体库 | `GET /api/admin/media`（`?q=` 文件名模糊、`?format=PNG\|JPG\|WEBP\|GIF\|AVIF`、`?sort=newest\|oldest\|name\|size`、`?page=`、`?pageSize=` 默认 60、上限 500）　`PATCH /api/admin/media/:id`（重命名）　`DELETE /api/admin/media/:id`（删库行并同步删 COS 对象；批量删除由前端逐条调用）　`GET /api/admin/media/:id/file`（COS 不可直连时的读代理）　`POST /api/admin/uploads`（multipart，先传 COS 再登记 `MediaAsset`，失败回滚对象） |
 | Health Check | `GET /api/health`（无鉴权，返回 200 即代表服务存活，供部署脚本探测使用） |
 
 ### F.3.3 写接口 DTO 与行为
@@ -813,7 +883,9 @@ blog/
 
 ## J.1 V1 明确不开发
 
-媒体库、图片上传、完整 CMS 用户系统、用户注册、多作者、RBAC、会员系统、站内私信、点赞、复杂评论系统、复杂运营系统、邮件营销、原生 App、`.md` 文件上传。
+完整 CMS 用户系统、用户注册、多作者、RBAC、会员系统、站内私信、点赞、复杂评论系统、复杂运营系统、邮件营销、原生 App、`.md` 文件上传。
+
+> 原列表中的「媒体库、图片上传」已实现（见 C.3），不再属于不开发范围。
 
 ## J.2 评论功能
 
@@ -882,7 +954,7 @@ V1 完成后可以逐步增加：Category 分类体系、定时发布、文章�
 3. 文章、标签和项目删除采用物理删除，不设计恢复站。
 4. 文章正文以 Markdown 原文存入 PostgreSQL，不生成 `.md` 内容文件。
 5. 项目只有外链卡片，不提供站内项目详情、Slug 或详细描述。
-6. 图片使用外部 URL；V1 不做媒体库和对象存储上传。
+6. 图片优先走媒体库上传到腾讯云 COS，同时保留「直接填外部 URL」的方式；未配置 COS 时上传返回 503，不影响已有图片浏览。
 7. 浏览量采用简单计数，接受刷新、机器人和重复访问，不做访客去重。
 8. 主题主色保持 `#4493f8`。
 9. 不使用需要联网获取的第三方字体，优先使用系统字体栈。
