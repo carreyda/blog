@@ -1,14 +1,13 @@
 <script setup lang="ts">
 type Bookmark = { id: number; name: string; description: string; iconUrl: string | null; url: string }
 type Category = { id: number; name: string; bookmarks: Bookmark[]; children: Category[] }
-type FlatCategory = { id: number; name: string; depth: number; count: number }
+type FlatCategory = { id: number; name: string; depth: number; count: number; hasChildren: boolean }
 type BookmarkResponse = { data: Category[] }
 
 const { data: response, pending } = await useFetch<BookmarkResponse>('/api/bookmarks')
 const categories = computed(() => response.value?.data || [])
 const search = ref('')
 const total = computed(() => categories.value.reduce((sum, category) => sum + categoryCount(category), 0))
-const flatCategories = computed(() => flattenCategories(categories.value))
 const filteredCategories = computed(() => {
   const keyword = search.value.trim().toLocaleLowerCase()
   if (!keyword) return categories.value
@@ -17,6 +16,29 @@ const filteredCategories = computed(() => {
     .filter((category): category is Category => category !== null)
 })
 const filteredTotal = computed(() => filteredCategories.value.reduce((sum, category) => sum + categoryCount(category), 0))
+
+/* Collapsed branches only affect the sidebar index; the sections below always render. */
+const collapsedIds = ref<number[]>([])
+const collapsedSet = computed(() => new Set(collapsedIds.value))
+const isCollapsed = (id: number) => collapsedSet.value.has(id)
+const branchIds = computed(() => flattenCategories(categories.value).filter(item => item.hasChildren).map(item => item.id))
+const allCollapsed = computed(() => branchIds.value.length > 0 && branchIds.value.every(id => collapsedSet.value.has(id)))
+
+/* A search hit should never hide behind a collapsed branch, so filtering expands everything. */
+const visibleCategories = computed(() => {
+  if (search.value.trim()) return flattenCategories(categories.value)
+  return flattenVisible(categories.value)
+})
+
+function toggleCategory(id: number) {
+  collapsedIds.value = isCollapsed(id)
+    ? collapsedIds.value.filter(item => item !== id)
+    : [...collapsedIds.value, id]
+}
+
+function toggleAllCategories() {
+  collapsedIds.value = allCollapsed.value ? [] : [...branchIds.value]
+}
 
 function categoryCount(category: Category): number {
   return category.bookmarks.length + category.children.reduce((sum, child) => sum + categoryCount(child), 0)
@@ -33,10 +55,18 @@ function filterCategory(category: Category, keyword: string): Category | null {
   return { ...category, bookmarks, children }
 }
 
+function toFlatCategory(node: Category, depth: number): FlatCategory {
+  return { id: node.id, name: node.name, depth, count: categoryCount(node), hasChildren: node.children.length > 0 }
+}
+
 function flattenCategories(nodes: Category[], depth = 0): FlatCategory[] {
+  return nodes.flatMap(node => [toFlatCategory(node, depth), ...flattenCategories(node.children, depth + 1)])
+}
+
+function flattenVisible(nodes: Category[], depth = 0): FlatCategory[] {
   return nodes.flatMap(node => [
-    { id: node.id, name: node.name, depth, count: categoryCount(node) },
-    ...flattenCategories(node.children, depth + 1),
+    toFlatCategory(node, depth),
+    ...(collapsedSet.value.has(node.id) ? [] : flattenVisible(node.children, depth + 1)),
   ])
 }
 
@@ -68,19 +98,43 @@ useSeoMeta({ title: '收藏', description: '按分类整理的实用网站、开
       </p>
 
       <nav class="category-tree" aria-label="收藏分类">
-        <p class="filter-label">分类</p>
-        <a
-          v-for="category in flatCategories"
-          :key="category.id"
-          :href="`#bookmark-category-${category.id}`"
-          class="tree-link"
-          :class="{ 'is-root': category.depth === 0 }"
-          :style="{ '--depth': category.depth }"
-          @click.prevent="jumpTo(`bookmark-category-${category.id}`)"
-        >
-          <span>{{ category.name }}</span>
-          <span>{{ category.count }}</span>
-        </a>
+        <div class="tree-head">
+          <p class="filter-label">分类</p>
+          <button v-if="branchIds.length" type="button" class="tree-all" @click="toggleAllCategories">
+            {{ allCollapsed ? '展开全部' : '收起全部' }}
+          </button>
+        </div>
+        <template v-for="category in visibleCategories" :key="category.id">
+          <button
+            v-if="category.hasChildren"
+            type="button"
+            class="tree-link has-children"
+            :class="{ 'is-root': category.depth === 0 }"
+            :style="{ '--depth': category.depth }"
+            :aria-expanded="!isCollapsed(category.id)"
+            @click="toggleCategory(category.id)"
+          >
+            <UIcon
+              name="i-lucide-chevron-right"
+              class="tree-chevron"
+              :class="{ 'is-open': !isCollapsed(category.id) }"
+            />
+            <span class="tree-name">{{ category.name }}</span>
+            <span class="tree-count">{{ category.count }}</span>
+          </button>
+          <a
+            v-else
+            :href="`#bookmark-category-${category.id}`"
+            class="tree-link"
+            :class="{ 'is-root': category.depth === 0 }"
+            :style="{ '--depth': category.depth }"
+            @click.prevent="jumpTo(`bookmark-category-${category.id}`)"
+          >
+            <span class="tree-dot" aria-hidden="true" />
+            <span class="tree-name">{{ category.name }}</span>
+            <span class="tree-count">{{ category.count }}</span>
+          </a>
+        </template>
       </nav>
     </aside>
 
@@ -224,24 +278,55 @@ useSeoMeta({ title: '收藏', description: '按分类整理的实用网站、开
   border-top: 1px solid var(--color-border);
 }
 
+.tree-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 6px;
+}
+
 .filter-label {
-  margin: 0 0 8px;
+  margin: 0;
   color: var(--color-text-muted);
   font-size: 10px;
   letter-spacing: .12em;
   text-transform: uppercase;
 }
 
+.tree-all {
+  padding: 2px 4px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 10px;
+  cursor: pointer;
+  transition: color .15s ease, background .15s ease;
+}
+
+.tree-all:hover {
+  color: var(--color-primary);
+  background: var(--color-background-secondary);
+}
+
 .tree-link {
-  display: flex;
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) auto;
   min-height: 30px;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 0 8px 0 calc(8px + var(--depth) * 14px);
+  gap: 6px;
+  padding: 0 8px 0 calc(4px + var(--depth) * 14px);
+  border: 0;
   border-radius: 6px;
+  background: transparent;
   color: var(--color-text-secondary);
+  font: inherit;
   font-size: 11px;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
   transition: color .15s ease, background .15s ease;
 }
 
@@ -251,7 +336,32 @@ useSeoMeta({ title: '收藏', description: '按分类整理的实用网站、开
   font-weight: 600;
 }
 
-.tree-link span:last-child {
+.tree-chevron {
+  width: 14px;
+  height: 14px;
+  color: var(--color-text-muted);
+  transition: transform .18s ease, color .15s ease;
+}
+
+.tree-chevron.is-open {
+  transform: rotate(90deg);
+}
+
+.tree-dot {
+  width: 4px;
+  height: 4px;
+  justify-self: center;
+  border-radius: 50%;
+  background: var(--color-border);
+}
+
+.tree-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tree-count {
   color: var(--color-text-muted);
   font-size: 10px;
   font-variant-numeric: tabular-nums;
@@ -260,6 +370,14 @@ useSeoMeta({ title: '收藏', description: '按分类整理的实用网站、开
 .tree-link:hover {
   color: var(--color-primary);
   background: var(--color-background-secondary);
+}
+
+.tree-link:hover .tree-chevron {
+  color: var(--color-primary);
+}
+
+.tree-link:hover .tree-dot {
+  background: color-mix(in srgb, var(--color-primary) 55%, transparent);
 }
 
 .bookmarks-content {
@@ -328,15 +446,34 @@ useSeoMeta({ title: '收藏', description: '按分类整理的实用网站、开
     padding-top: 16px;
   }
 
-  .filter-label {
+  .tree-head {
     width: 100%;
+  }
+
+  .filter-label {
+    width: auto;
     margin-bottom: 2px;
+  }
+
+  .tree-all {
+    white-space: nowrap;
   }
 
   .tree-link {
     min-height: 28px;
     padding: 0 10px;
     border: 1px solid var(--color-border);
+  }
+
+  .tree-dot {
+    display: none;
+  }
+
+  .tree-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
   }
 }
 
