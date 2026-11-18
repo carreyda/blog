@@ -1,7 +1,18 @@
 <script setup lang="ts">
-type Bookmark = { id: number; name: string; description: string; iconUrl: string | null; url: string }
+type Bookmark = {
+  id: number
+  name: string
+  description: string
+  iconUrl: string | null
+  url: string
+  sort: number
+}
 type Category = { id: number; name: string; bookmarks: Bookmark[]; children: Category[] }
 type BookmarkResponse = { data: Category[] }
+type AdminSession = {
+  user: { id: number; username: string; role: string }
+  csrfToken: string
+}
 
 type BookmarkSectionItem = {
   id: number
@@ -22,6 +33,12 @@ const { data: response, pending } = await useFetch<BookmarkResponse>('/api/bookm
 const categories = computed(() => response.value?.data || [])
 const search = ref('')
 
+const adminSession = ref<AdminSession | null>(null)
+const editMode = ref(false)
+const savingOrder = ref(false)
+const sortMessage = ref('')
+let sortMessageTimer: ReturnType<typeof setTimeout> | null = null
+
 const filteredCategories = computed(() => {
   const keyword = search.value.trim().toLocaleLowerCase()
   if (!keyword) return categories.value
@@ -32,6 +49,7 @@ const filteredCategories = computed(() => {
 
 const total = computed(() => categories.value.reduce((sum, category) => sum + categoryCount(category), 0))
 const filteredTotal = computed(() => filteredCategories.value.reduce((sum, category) => sum + categoryCount(category), 0))
+const canEnterEditMode = computed(() => !search.value.trim())
 
 /*
  * One root category = one page group. Categories that only pass through (no bookmarks of
@@ -48,6 +66,102 @@ const groups = computed<BookmarkGroup[]>(() => filteredCategories.value.map((roo
     sections,
   }
 }))
+
+onMounted(async () => {
+  try {
+    const session = await $fetch<{ data: AdminSession }>('/api/auth/session')
+    adminSession.value = session.data
+  } catch {
+    adminSession.value = null
+  }
+})
+
+onBeforeUnmount(() => {
+  if (sortMessageTimer) clearTimeout(sortMessageTimer)
+})
+
+watch(search, (value) => {
+  if (value.trim()) editMode.value = false
+})
+
+function toggleEditMode() {
+  if (!adminSession.value || savingOrder.value) return
+  if (!editMode.value && !canEnterEditMode.value) return
+  editMode.value = !editMode.value
+  if (!editMode.value) sortMessage.value = ''
+}
+
+function flashSortMessage(message: string) {
+  sortMessage.value = message
+  if (sortMessageTimer) clearTimeout(sortMessageTimer)
+  sortMessageTimer = setTimeout(() => {
+    sortMessage.value = ''
+  }, 2400)
+}
+
+function findCategory(items: Category[], id: number): Category | null {
+  for (const item of items) {
+    if (item.id === id) return item
+    const found = findCategory(item.children, id)
+    if (found) return found
+  }
+  return null
+}
+
+/*
+ * Reorder one category's bookmarks and persist through the existing admin endpoint.
+ * Only the admin session rendered by onMounted can trigger this; visitors never see
+ * the sort toggle, and the server rejects the PATCH without a session anyway.
+ */
+async function handleReorder(categoryId: number, orderedIds: number[]) {
+  const session = adminSession.value
+  if (!session || savingOrder.value || search.value.trim()) return
+  const category = findCategory(categories.value, categoryId)
+  if (!category) return
+
+  const bookmarksById = new Map(category.bookmarks.map(bookmark => [bookmark.id, bookmark]))
+  const ordered = orderedIds
+    .map(id => bookmarksById.get(id))
+    .filter((bookmark): bookmark is Bookmark => Boolean(bookmark))
+  if (ordered.length !== orderedIds.length) return
+
+  // Same slot policy as the admin page: reuse the current sort slots when they are
+  // unique, otherwise renumber this category's visible range.
+  const slots = category.bookmarks.map(bookmark => bookmark.sort).sort((left, right) => left - right)
+  const uniqueSlots = slots.every((value, index) => index === 0 || value !== slots[index - 1])
+  const slotValues = uniqueSlots ? slots : slots.map((value, index) => value + index)
+  const entries = ordered.map((bookmark, index) => ({ id: bookmark.id, sort: slotValues[index] ?? index }))
+  const sortById = new Map(entries.map(entry => [entry.id, entry.sort]))
+  const previous = category.bookmarks
+
+  category.bookmarks = ordered.map(bookmark => ({
+    ...bookmark,
+    sort: sortById.get(bookmark.id) ?? bookmark.sort,
+  }))
+
+  savingOrder.value = true
+  sortMessage.value = '保存中…'
+  try {
+    await $fetch('/api/admin/bookmarks/reorder', {
+      method: 'PATCH',
+      body: { entries },
+      headers: { 'X-CSRF-Token': session.csrfToken },
+    })
+    flashSortMessage('排序已保存')
+  } catch (error) {
+    category.bookmarks = previous
+    const status = (error as { statusCode?: number }).statusCode ?? (error as { status?: number }).status
+    if (status === 401) {
+      adminSession.value = null
+      editMode.value = false
+      flashSortMessage('登录状态已失效，请重新登录')
+    } else {
+      flashSortMessage('保存失败，请重试')
+    }
+  } finally {
+    savingOrder.value = false
+  }
+}
 
 function categoryCount(category: Category): number {
   return category.bookmarks.length + category.children.reduce((sum, child) => sum + categoryCount(child), 0)
@@ -94,14 +208,36 @@ useSeoMeta({ title: '收藏', description: '按分类整理的实用网站、开
           <template v-else>共 <strong>{{ total }}</strong> 个站点</template>
         </p>
       </div>
-      <label class="bookmark-search">
-        <UIcon name="i-lucide-search" />
-        <input v-model="search" type="search" placeholder="搜索收藏名称、描述或网址" aria-label="搜索收藏">
-        <button v-if="search" type="button" aria-label="清除搜索" @click="search = ''">
-          <UIcon name="i-lucide-x" />
+      <div class="head-actions">
+        <button
+          v-if="adminSession"
+          type="button"
+          class="sort-toggle"
+          :class="{ 'is-active': editMode }"
+          :disabled="savingOrder || (!editMode && !canEnterEditMode)"
+          :title="editMode ? '退出排序' : '登录管理员后可拖拽排序'"
+          @click="toggleEditMode"
+        >
+          <UIcon :name="editMode ? 'i-lucide-check' : 'i-lucide-grip-vertical'" />
+          <span>{{ editMode ? '完成' : '排序' }}</span>
         </button>
-      </label>
+        <label class="bookmark-search">
+          <UIcon name="i-lucide-search" />
+          <input v-model="search" type="search" placeholder="搜索收藏名称、描述或网址" aria-label="搜索收藏">
+          <button v-if="search" type="button" aria-label="清除搜索" @click="search = ''">
+            <UIcon name="i-lucide-x" />
+          </button>
+        </label>
+      </div>
     </header>
+
+    <p v-if="editMode || sortMessage" class="sort-hint">
+      <template v-if="editMode">
+        <UIcon name="i-lucide-hand" />
+        <span>拖动卡片上的手柄调整顺序，仅在本分类内生效</span>
+      </template>
+      <span v-if="sortMessage" class="sort-message">{{ sortMessage }}</span>
+    </p>
 
     <div v-if="pending" class="empty-state">正在加载收藏…</div>
     <div v-else-if="!categories.length" class="empty-state">
@@ -118,16 +254,24 @@ useSeoMeta({ title: '收藏', description: '按分类整理的实用网站、开
       <section v-for="group in groups" :key="group.id" class="bookmark-group">
         <BookmarkSection
           variant="group"
+          :category-id="group.id"
           :title="group.name"
           :count="group.count"
           :bookmarks="group.bookmarks"
+          :editable="editMode"
+          :sorting="savingOrder"
+          @reorder="handleReorder"
         />
         <BookmarkSection
           v-for="section in group.sections"
           :key="section.id"
+          :category-id="section.id"
           :title="section.name"
           :path="section.path"
           :bookmarks="section.bookmarks"
+          :editable="editMode"
+          :sorting="savingOrder"
+          @reorder="handleReorder"
         />
       </section>
     </div>
@@ -172,6 +316,71 @@ useSeoMeta({ title: '收藏', description: '按分类整理的实用网站、开
 .page-meta strong {
   color: var(--color-text);
   font-weight: 650;
+}
+
+.head-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.sort-toggle {
+  display: inline-flex;
+  min-height: 40px;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  background: var(--color-background-secondary);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  transition: border-color .16s ease, color .16s ease, background-color .16s ease;
+}
+
+.sort-toggle:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--color-primary) 40%, var(--color-border));
+  color: var(--color-text);
+}
+
+.sort-toggle.is-active {
+  border-color: color-mix(in srgb, var(--color-primary) 55%, var(--color-border));
+  background: color-mix(in srgb, var(--color-primary) 10%, var(--color-background-secondary));
+  color: var(--color-primary);
+}
+
+.sort-toggle:disabled {
+  cursor: not-allowed;
+  opacity: .45;
+}
+
+.sort-toggle svg {
+  width: 14px;
+  height: 14px;
+}
+
+.sort-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: -32px 0 30px;
+  color: var(--color-text-muted);
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 10.5px;
+}
+
+.sort-hint svg {
+  width: 13px;
+  height: 13px;
+  flex: 0 0 auto;
+}
+
+.sort-message {
+  color: var(--color-text-secondary);
 }
 
 .bookmark-search {
@@ -295,8 +504,18 @@ useSeoMeta({ title: '收藏', description: '按分类整理的实用网站、开
     font-size: 28px;
   }
 
+  .head-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
   .bookmark-search {
     width: 100%;
+    flex: 1 1 220px;
+  }
+
+  .sort-hint {
+    margin: -20px 0 24px;
   }
 
   .bookmark-groups {

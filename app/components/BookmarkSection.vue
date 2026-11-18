@@ -2,17 +2,82 @@
 type Bookmark = { id: number; name: string; description: string; iconUrl: string | null; url: string }
 
 const props = withDefaults(defineProps<{
+  categoryId: number
   title: string
   variant?: 'group' | 'leaf'
   path?: string
   count?: number
   bookmarks: Bookmark[]
+  editable?: boolean
+  sorting?: boolean
 }>(), {
   variant: 'leaf',
   path: '',
+  editable: false,
+  sorting: false,
 })
 
+const emit = defineEmits<{
+  reorder: [categoryId: number, orderedIds: number[]]
+}>()
+
 const displayCount = computed(() => props.count ?? props.bookmarks.length)
+
+const draggingId = ref<number | null>(null)
+const dropTargetId = ref<number | null>(null)
+const dropPosition = ref<'before' | 'after'>('after')
+
+function canDropOn(target: Bookmark) {
+  return props.editable && !props.sorting && draggingId.value !== null && draggingId.value !== target.id
+}
+
+function onDragStart(bookmark: Bookmark, event: DragEvent) {
+  if (!props.editable || props.sorting) {
+    event.preventDefault()
+    return
+  }
+  draggingId.value = bookmark.id
+  event.dataTransfer?.setData('text/plain', String(bookmark.id))
+  if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move'
+}
+
+function onDragOver(bookmark: Bookmark, event: DragEvent) {
+  if (!canDropOn(bookmark)) return
+  event.preventDefault()
+  if (event.dataTransfer) event.dataTransfer.dropEffect = 'move'
+  const target = event.currentTarget as HTMLElement | null
+  const rect = target?.getBoundingClientRect()
+  if (!rect) return
+  dropPosition.value = event.clientX - rect.left < rect.width / 2 ? 'before' : 'after'
+  dropTargetId.value = bookmark.id
+}
+
+function onDragLeave(bookmark: Bookmark) {
+  if (dropTargetId.value === bookmark.id) dropTargetId.value = null
+}
+
+function clearDrag() {
+  draggingId.value = null
+  dropTargetId.value = null
+}
+
+function onDrop(bookmark: Bookmark, event: DragEvent) {
+  event.preventDefault()
+  const draggedId = draggingId.value
+  const position = dropPosition.value
+  clearDrag()
+  if (draggedId === null || draggedId === bookmark.id) return
+  if (!props.editable || props.sorting) return
+
+  const ids = props.bookmarks.map(item => item.id)
+  const from = ids.indexOf(draggedId)
+  if (from === -1) return
+  ids.splice(from, 1)
+  const targetIndex = ids.indexOf(bookmark.id)
+  if (targetIndex === -1) return
+  ids.splice(position === 'before' ? targetIndex : targetIndex + 1, 0, draggedId)
+  emit('reorder', props.categoryId, ids)
+}
 </script>
 
 <template>
@@ -28,6 +93,14 @@ const displayCount = computed(() => props.count ?? props.bookmarks.length)
         v-for="bookmark in bookmarks"
         :key="bookmark.id"
         :bookmark="bookmark"
+        :draggable="editable && !sorting"
+        :is-dragging="draggingId === bookmark.id"
+        :drop-position="dropTargetId === bookmark.id ? dropPosition : null"
+        @dragstart="onDragStart(bookmark, $event)"
+        @dragover="onDragOver(bookmark, $event)"
+        @dragleave="onDragLeave(bookmark)"
+        @drop="onDrop(bookmark, $event)"
+        @dragend="clearDrag"
       />
     </div>
   </div>

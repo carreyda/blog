@@ -1,7 +1,21 @@
 <script setup lang="ts">
 type Bookmark = { id: number; name: string; description: string; iconUrl: string | null; url: string }
 
-const props = defineProps<{ bookmark: Bookmark }>()
+const props = defineProps<{
+  bookmark: Bookmark
+  draggable?: boolean
+  isDragging?: boolean
+  dropPosition?: 'before' | 'after' | null
+}>()
+
+const emit = defineEmits<{
+  dragstart: [event: DragEvent]
+  dragover: [event: DragEvent]
+  dragleave: []
+  drop: [event: DragEvent]
+  dragend: []
+}>()
+
 const iconBroken = ref(false)
 
 watch(() => props.bookmark.iconUrl, () => {
@@ -18,7 +32,22 @@ const hostname = computed(() => {
 </script>
 
 <template>
-  <a class="bookmark-card" :href="bookmark.url" target="_blank" rel="noopener noreferrer">
+  <a
+    class="bookmark-card"
+    :class="{
+      'is-dragging': isDragging,
+      'is-drop-before': dropPosition === 'before',
+      'is-drop-after': dropPosition === 'after',
+    }"
+    :href="bookmark.url"
+    target="_blank"
+    rel="noopener noreferrer"
+    draggable="false"
+    @dragover="emit('dragover', $event)"
+    @dragleave="emit('dragleave')"
+    @drop.prevent="emit('drop', $event)"
+    @dragend="emit('dragend')"
+  >
     <span class="card-head">
       <span class="card-icon">
         <img
@@ -31,6 +60,17 @@ const hostname = computed(() => {
         <UIcon v-else name="i-lucide-globe-2" />
       </span>
       <strong class="card-name">{{ bookmark.name }}</strong>
+      <span
+        v-if="draggable"
+        class="card-drag"
+        draggable="true"
+        title="拖拽调整顺序"
+        aria-label="拖拽调整顺序"
+        @dragstart.stop="emit('dragstart', $event)"
+        @click.prevent
+      >
+        <UIcon name="i-lucide-grip-vertical" />
+      </span>
     </span>
     <p v-if="bookmark.description" class="card-desc">{{ bookmark.description }}</p>
     <span class="card-meta">
@@ -42,6 +82,7 @@ const hostname = computed(() => {
 
 <style scoped>
 .bookmark-card {
+  position: relative;
   display: flex;
   min-width: 0;
   min-height: 142px;
@@ -52,7 +93,7 @@ const hostname = computed(() => {
   background: var(--color-background-secondary);
   color: inherit;
   text-decoration: none;
-  transition: border-color .18s ease, background-color .18s ease;
+  transition: border-color .18s ease, background-color .18s ease, opacity .18s ease;
 }
 
 .bookmark-card:hover {
@@ -62,6 +103,29 @@ const hostname = computed(() => {
 .bookmark-card:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
+}
+
+.bookmark-card.is-dragging {
+  opacity: .45;
+}
+
+.bookmark-card.is-drop-before::before,
+.bookmark-card.is-drop-after::after {
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--color-primary);
+  content: '';
+}
+
+.bookmark-card.is-drop-before::before {
+  left: -8px;
+}
+
+.bookmark-card.is-drop-after::after {
+  right: -8px;
 }
 
 .card-head {
@@ -96,6 +160,8 @@ const hostname = computed(() => {
 }
 
 .card-name {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   font-family: system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei UI', 'PingFang SC', sans-serif;
   font-size: 14px;
@@ -103,6 +169,35 @@ const hostname = computed(() => {
   letter-spacing: -.01em;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.card-drag {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  border-radius: 5px;
+  color: var(--color-text-muted);
+  cursor: grab;
+  opacity: .7;
+  place-items: center;
+  transition: opacity .15s ease, color .15s ease, background-color .15s ease;
+  user-select: none;
+}
+
+.card-drag:hover {
+  background: var(--color-background);
+  color: var(--color-text);
+  opacity: 1;
+}
+
+.card-drag:active {
+  cursor: grabbing;
+}
+
+.card-drag svg {
+  width: 13px;
+  height: 13px;
 }
 
 .card-desc {

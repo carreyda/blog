@@ -8,7 +8,7 @@ export default defineEventHandler(async () => {
       bookmarks: {
         where: { isVisible: true },
         orderBy: [{ sort: 'asc' }, { id: 'desc' }],
-        select: { id: true, name: true, description: true, iconUrl: true, url: true },
+        select: { id: true, name: true, description: true, iconUrl: true, url: true, sort: true },
       },
     },
   })
